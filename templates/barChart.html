@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<meta charset="utf-8">
+<script src="//d3js.org/d3.v3.min.js"></script>
+<style>
+
+.barChart div {
+  font: 10px sans-serif;
+  background-color: steelblue;
+  text-align: right;
+  padding: 3px;
+  margin: 1px;
+  color: white;
+}
+
+.svgBarChart rect {
+  fill: steelblue;
+}
+
+.svgBarChart text {
+  fill: white;
+  font: 10px sans-serif;
+  text-anchor: end;
+}
+
+.svgBarChart2 rect {
+  fill: steelblue;
+}
+
+.svgBarChart2 text {
+  fill: white;
+  font: 10px sans-serif;
+  text-anchor: end;
+}
+
+</style>
+HTML bar chart:
+<div class="barChart"></div>
+
+SVG bar chart:<br>
+<svg class="svgBarChart"></svg><br>
+
+SVG bar chart with loading data from external file:<br>
+<svg class="svgBarChart2"></svg>
+
+<script>
+// create HTML bar chart
+var data = [4, 8, 15, 16, 23, 42];
+ 
+var chart = d3.select(".barChart");
+// select elements that should be updated 
+var bar = chart.selectAll("div");
+// join data points to div objects 
+var barUpdate = bar.data(data);
+// instantiate enter selection which represents new data for which there is no existing element
+// update, exit selection objects are empty
+var barEnter = barUpdate.enter().append("div");
+// d3 scale linear returns corresponding value from range given value from domain
+// x(20) returns  80, x(50) returns 320
+var x = d3.scale.linear()
+                .domain([0, d3.max(data)])
+                .range([0, 420]);
+// set width of each bar as function of data points
+barEnter.style("width", function(d) { return x(d) + "px"; });
+// set text of each bar
+barEnter.text(function(d) { return d; });
+// selection operators allow to set value as constant (same for all join objects) or function
+
+// create SVG bar chart
+var data = [4, 8, 15, 16, 23, 42];
+// specify width and height of svg element
+var width = 420, barHeight = 20;
+// d3 scale linear returns corresponding value from range given value from domain
+// x(20) returns 80, x(50) returns 320
+var x = d3.scale.linear()
+    .domain([0, d3.max(data)])
+    .range([0, width]);
+// select svg element and set its width and height
+var chart = d3.select(".svgBarChart")
+    .attr("width", width)
+    .attr("height", barHeight * data.length);
+// join data to svg bar elements (g)
+// set bar positions by setting svg transform attribute with function 
+var bar = chart.selectAll("g")
+    .data(data)
+  .enter().append("g")
+    .attr("transform", function(d, i) { return "translate(0," + i * barHeight + ")"; });
+// append rect elements inside g element
+// data is inherited from bar
+bar.append("rect")
+    .attr("width", x)
+    .attr("height", barHeight - 1);
+// append text elements inside g element
+// data is inherited from bar
+bar.append("text")
+    .attr("x", function(d) { return x(d) - 3; })
+    .attr("y", barHeight / 2)
+    .attr("dy", ".35em")
+    .text(function(d) { return d; });
+// data join is needed when creating variable number of children elements based on data
+// children elements inherit data from their parents
+
+// create SVG bar chart with asynchronous loading the data from external file
+var width = 420, barHeight = 20; 
+// start linear scale
+var x = d3.scale.linear()
+    .range([0, width]);
+// select svg element and set its width
+var chart = d3.select(".svgBarChart2")
+    .attr("width", width);
+// load data asynchronously from file
+// embedded code runs last when loading finished
+// following code runs next while data is loading
+// type function modifies data so that 
+d3.tsv('/static/data/barChart.tsv', function(error, data) {
+// complete linear scale
+x.domain([0, d3.max(data, function(d) { return d.value; })]);
+// specify svg element height
+chart.attr("height", barHeight * data.length);
+// join data with svg bar (g) elements
+var bar = chart.selectAll("g")
+			   .data(data)
+			   .enter().append("g")
+               .attr("transform", function(d, i) { return "translate(0," + i * barHeight + ")"; });
+// append rect elements inside g elements
+bar.append("rect")
+   .attr("width", function(d) { return x(d.value); })
+   .attr("height", barHeight - 1);
+// append text elements inside g elements
+bar.append("text")
+   .attr("x", function(d) { return x(d.value) - 3; })
+   .attr("y", barHeight / 2)
+   .attr("dy", ".35em")
+   .text(function(d) { return d.value; });
+});
+</script>
