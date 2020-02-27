@@ -7,8 +7,12 @@ def home():
     return render_template("index.html")
 
 @app.route("/barChart")
-def test():
+def barChart():
     return render_template("barChart.html")
+
+@app.route("/barChart2")
+def barChart2():
+    return render_template("barChart2.html")
 
 if __name__ == "__main__":
     app.run(debug=True)
