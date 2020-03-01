@@ -14,5 +14,17 @@ def barChart():
 def barChart2():
     return render_template("barChart2.html")
 
+@app.route("/CChart")
+def CChart():
+    return render_template("candlestickChart.html")
+
+@app.route("/animation")
+def animation():
+    return render_template("animation.html")
+
+@app.route("/intBarChart")
+def intBarChart():
+    return render_template("intBarChart.html")
+
 if __name__ == "__main__":
     app.run(debug=True)
