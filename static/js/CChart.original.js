@@ -5,9 +5,8 @@ function drawChart() {
 		// Define month names
 		const months = { 0: 'Jan', 1: 'Feb', 2: 'Mar', 3: 'Apr', 4: 'May', 5: 'Jun', 6: 'Jul', 7: 'Aug', 8: 'Sep', 9: 'Oct', 10: 'Nov', 11: 'Dec' }
 
-		//console.log(prices)
 		// define dateFormat function
-		var dateFormat = d3.timeParse("%Y-%m-%d %H:%M");
+		var dateFormat = d3.timeParse("%Y-%m-%d");
 
 		// Parse dates
 		for (var i = 0; i < prices.length; i++) {
@@ -22,71 +21,68 @@ function drawChart() {
 			h2 = 820 - margin2.top - margin2.bottom;
 
 		// define svg dimensions
-		var svg = d3.select("#container")
-					.attr("width", w + margin.left + margin.right)
-					.attr("height", h + margin.top + margin.bottom);
+		var svg = d3.select("#container").attr("width", w + margin.left + margin.right)
+					                     .attr("height", h + margin.top + margin.bottom);
 
 		// define chart dimensions
-		var focus = svg.append("g")
-					   .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+		var focus = svg.append("g").attr("transform", "translate(" + margin.left + "," + margin.top + ")");
 
 		// define brush dimensions
-		var context = svg.append("g")
-						 .attr("transform", "translate(" + margin2.left + "," + margin2.top + ")");
+		var context = svg.append("g").attr("transform", "translate(" + margin2.left + "," + margin2.top + ")");
 
-		// get array of dates in data
+		// get array of dates from data
 		let dates = _.map(prices, 'Date');
 
-		// define min and max dates in data
-		var xmin = d3.min(prices.map(r => r.Date.getTime()));
-		var xmax = d3.max(prices.map(r => r.Date.getTime()));
+		// get min and max dates from data
+        // getTime return number of milliseconds of date objects
+		var xmin = d3.min(prices.map(row => row.Date.getTime()));
+		var xmax = d3.max(prices.map(row => row.Date.getTime()));
 
-		// define linear x-axis scale
+		// define linear x-axis scale for positioning of candles
 		var xScale = d3.scaleLinear().domain([-1, dates.length]).range([0, w]);
 
 		// define quantize date scale with continuous domain and discrete range
 		var xDateScale = d3.scaleQuantize().domain([0, dates.length]).range(dates);
 
 		// define banded x-axis scale to account for discontinuities in financial time series
+        // band scale accounts for padding between candles; range consists of x positions of candles
 		let xBand = d3.scaleBand().domain(d3.range(-1, dates.length)).range([0, w]).padding(0.3);
 
 		// define x-axis, apply scale and tick formatting
-		var xAxis = d3.axisBottom()
-					  .scale(xScale)
-					  .tickFormat((d) => dateFormatter(d));
+		var xAxis = d3.axisBottom().scale(xScale).tickFormat((d) => dateFormatter(d));
 		
+		// append clipPath to focus
+		focus.append("defs").append("clipPath").attr("id", "clip")
+                            .append("rect").attr("width", w)
+			                               .attr("height", h);
+
 		// add clip path to focus - needed to make chart draggable
-		focus.append("rect")
-			 .attr("id", "rect")
-			 .attr("width", w)
-			 .attr("height", h)
-			 .style("fill", "none")
-			 .style("pointer-events", "all")
-			 .attr("clip-path", "url(#clip)");
+		focus.append("rect").attr("id", "rect")
+			                .attr("width", w)
+			                .attr("height", h)
+			                .style("fill", "none")
+			                .style("pointer-events", "all")
+			                .attr("clip-path", "url(#clip)");
 		
 		// Add x-axis to chart
-		var gX = focus.append("g")
-					  .attr("class", "axis x-axis") //Assign "axis" class
-					  .attr("transform", "translate(0," + h + ")")
-					  .call(xAxis);
+		var gX = focus.append("g").attr("class", "axis x-axis") //Assign "axis" class
+					              .attr("transform", "translate(0," + h + ")")
+					              .call(xAxis);
 		
-		// wrap x-axis labels
-		gX.selectAll(".tick text")
-		  .call(wrap, xBand.bandwidth());
+		// adjust width of x labels
+		gX.selectAll(".tick text").call(wrap, xBand.bandwidth());
 		
 		// add x-axis to brush
-		var gX2 = context.append("g")
-						 .attr("class", "axis axis--x")			
-						 .attr("transform", "translate(0," + h2 + ")")
-						 .call(xAxis);
+		var gX2 = context.append("g").attr("class", "axis axis--x")			
+						             .attr("transform", "translate(0," + h2 + ")")
+						             .call(xAxis);
 		
-		// add brush x-axis labels
-		gX2.selectAll(".tick text")
-		   .call(wrap, xBand.bandwidth());
+		// adjust width of x labels
+		gX2.selectAll(".tick text").call(wrap, xBand.bandwidth());
 		
-		// define min and max prices in data
-		var ymin = d3.min(prices.map(r => r.Low));
-		var ymax = d3.max(prices.map(r => r.High));
+		// Get min and max prices from data
+		var ymin = d3.min(prices.map(row => row.Low));
+		var ymax = d3.max(prices.map(row => row.High));
 
 		// define linear y-axis scale
 		var yScale = d3.scaleLinear().domain([ymin, ymax]).range([h, 0]).nice();
@@ -95,29 +91,30 @@ function drawChart() {
 		var yAxis = d3.axisLeft().scale(yScale);
 		
 		// Add y-axis to chart
-		var gY = focus.append("g")
-			.attr("class", "axis y-axis")
-			.call(yAxis);
+		var gY = focus.append("g").attr("class", "axis y-axis")
+			                      .call(yAxis);
 		
-		// add clip-path to chart
-		var chartBody = focus.append("g")
-			.attr("class", "chartBody")
-			.style("pointer-events", "all")
-			.attr("clip-path", "url(#clip)");
+		// add clip-path to chart body
+		var chartBody = focus.append("g").attr("class", "chartBody")
+			                             .style("pointer-events", "all")
+			                             .attr("clip-path", "url(#clip)");
 
-		// draw candles
+		// draw candles in chart body
+        // candles are rect elements
 		let candles = chartBody.selectAll(".candle")
 			.data(prices)
 			.enter()
 			.append("rect")
-			.attr('x', (d, i) => xScale(i) - xBand.bandwidth())
 			.attr("class", "candle")
+             // xBand.bandwidth() returns width of each candle (each band) 
+			.attr('x', (d, i) => xScale(i) - xBand.bandwidth())
 			.attr('y', d => yScale(Math.max(d.Open, d.Close)))
 			.attr('width', xBand.bandwidth())
+             // yScale returns higher positions for lower prices
 			.attr('height', d => (d.Open === d.Close) ? 1 : yScale(Math.min(d.Open, d.Close)) - yScale(Math.max(d.Open, d.Close)))
 			.attr("fill", d => (d.Open === d.Close) ? "silver" : (d.Open > d.Close) ? "red" : "green");
 
-		// draw high and low in candles
+		// draw high-low lines in chart body
 		let stems = chartBody.selectAll("g.line")
 			.data(prices)
 			.enter()
@@ -128,14 +125,6 @@ function drawChart() {
 			.attr("y1", d => yScale(d.High))
 			.attr("y2", d => yScale(d.Low))
 			.attr("stroke", d => (d.Open === d.Close) ? "white" : (d.Open > d.Close) ? "red" : "green");
-		
-		// append clipPath to focus
-		focus.append("defs")
-			.append("clipPath")
-			.attr("id", "clip")
-			.append("rect")
-			.attr("width", w)
-			.attr("height", h);
 		
 		// define brush and bind ebvent listeners
 		var currentExtent;
@@ -257,7 +246,8 @@ function drawChart() {
 			}, 300)
 
 		}
-
+        
+        // Define format of x labels
 		function dateFormatter(d) {
 			var d = dates[d]
 			if (d !== undefined) {
@@ -271,9 +261,14 @@ function drawChart() {
 	});
 }
 
+// Adjust width of x labels
 function wrap(text, width) {
 	text.each(function () {
+            // get label element
 		var text = d3.select(this),
+            // get text of label element
+            // split text by spaces
+            // reverse resulting array
 			words = text.text().split(/\s+/).reverse(),
 			word,
 			line = [],
@@ -282,14 +277,17 @@ function wrap(text, width) {
 			y = text.attr("y"),
 			dy = parseFloat(text.attr("dy")),
 			tspan = text.text(null).append("tspan").attr("x", 0).attr("y", y).attr("dy", dy + "em");
-		while (word = words.pop()) {
+		// loop over words array
+        while (word = words.pop()) {
+            // add word to array
 			line.push(word);
 			tspan.text(line.join(" "));
+            // create tspan element with so many words that its width < limit
 			if (tspan.node().getComputedTextLength() > width) {
 				line.pop();
 				tspan.text(line.join(" "));
 				line = [word];
-				tspan = text.append("tspan").attr("x", 0).attr("y", y).attr("dy", ++lineNumber * lineHeight + dy + "em").text(word);
+				tspan = text.append("tspan").attr("x", 0).attr("y", y).attr("dy", ++lineNumber*lineHeight + dy + "em").text(word);
 			}
 		}
 	});
