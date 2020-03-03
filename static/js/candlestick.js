@@ -11,9 +11,10 @@ function drawChart() {
 		}
 
 		// get array of dates from data
-        let dates = prices.map(function(d,i){return d.Date;});
+        var dtArray = prices.map(function(d,i){return d.Date;});
 	    
         // calculate most common date
+        var averDate = getAverDate(dtArray);
 
         // define margin bounds for focus & context regions
 		const margin = { top: 15, right: 15, bottom: 80, left: 80 },
@@ -38,14 +39,14 @@ function drawChart() {
 		var xmax = d3.max(prices.map(row => row.Date.getTime()));
 
 		// define linear x-axis scale for positioning of candles
-		var xScale = d3.scaleLinear().domain([-1, dates.length]).range([0, w]);
+		var xScale = d3.scaleLinear().domain([-1, dtArray.length]).range([0, w]);
 
 		// define banded x-axis scale to account for padding between candles
         // band scale accounts for padding between candles; range consists of x positions of candles
-		let xBand = d3.scaleBand().domain(d3.range(-1, dates.length)).range([0, w]).padding(0.3);
+		let xBand = d3.scaleBand().domain(d3.range(-1, dtArray.length)).range([0, w]).padding(0.3);
 
 		// define x-axis, apply scale and tick formatting
-		var xAxis = d3.axisBottom().scale(xScale).tickFormat((d) => dateFormatter(d));
+		var xAxis = d3.axisBottom().scale(xScale).tickFormat((d) => timeFormatter(d, dtArray));
 		
 		// append clipPath to focus
 		focus.append("defs").append("clipPath").attr("id", "clip")
@@ -67,7 +68,7 @@ function drawChart() {
         // Draw x axis title
         focus.append("text").attr("transform", "translate(" + (w/2) + " ," + (h + margin.top + margin.bottom/2) + ")")
                           .style("text-anchor", "middle")
-                          .text("Date");
+                          .text(dateFormatter(averDate));
 
 		// adjust width of x labels
 		gX.selectAll(".tick text").call(wrap, xBand.bandwidth());
@@ -80,7 +81,7 @@ function drawChart() {
 		var yScale = d3.scaleLinear().domain([ymin, ymax]).range([h, 0]).nice();
 
 		// define y-axis, apply scale and define label precision
-		var yAxis = d3.axisLeft().scale(yScale).tickFormat(function(d) { return parseFloat(d).toFixed(5); });
+		var yAxis = d3.axisLeft().scale(yScale).tickFormat(d3.format(".5f"));
 		
 		// Add y-axis to chart
 		var gY = focus.append("g").attr("class", "axis")
@@ -129,16 +130,38 @@ function drawChart() {
 			.attr("y2", d => yScale(d.Low))
 			//.attr("stroke", d => (d.Open === d.Close) ? "white" : (d.Open > d.Close) ? "red" : "green");
         
-        // Define format of x labels
-		function dateFormatter(d) {
-			var dt = dates[d]
-			if (dt !== undefined) {
-				var hours = dt.getHours();
-				var minutes = (dt.getMinutes() < 10 ? '0' : '') + dt.getMinutes();
-				return hours + ':' + minutes;
-			}
-        }
+
     });
+}
+
+// Function that returns most common date object from array of dates
+function getAverDate(dates) {
+    var datesFreq = [];
+    // calculate frequency of each date in dates array
+    dates.forEach(function (dt, i) {
+        var date = new Date(dt.getFullYear(), dt.getMonth(), dt.getDate());
+        if(datesFreq[date]) datesFreq[date]++; else datesFreq[date]=1;
+    });
+    // return date object with highest value in datesFreq dict
+    return new Date(Object.keys(datesFreq).reduce((a, b) => datesFreq[a] > datesFreq[b] ? a : b));
+    }
+
+// Function that returns formatted labels of x axis
+function timeFormatter(d, dtArray) {
+    var dt = dtArray[d];
+    if (dt !== undefined) {
+        var hours = dt.getHours();
+        var minutes = (dt.getMinutes() < 10 ? '0' : '') + dt.getMinutes();
+        return hours + ':' + minutes;
+    }
+}
+
+// Function that returns formatted date
+function dateFormatter(dt) {
+    var date = dt.getDate();
+    var month = (dt.getMonth() < 10 ? '0' : '') + (dt.getMonth()+1);
+    var year = dt.getFullYear();
+    return date + '.' + month + '.' + year;
 }
 
 // Adjust width of x labels
