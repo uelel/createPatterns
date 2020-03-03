@@ -1,6 +1,6 @@
 function drawChart() {
     
-    d3.json("/static/data/data.json").then(function(prices) {
+        d3.json("/static/data/data2.json").then(function(prices) {
 	
 		// define dateFormat function
 		var dateFormat = d3.timeParse("%Y-%m-%d-%H:%M:%S%Z");
@@ -135,6 +135,7 @@ function drawChart() {
 }
 
 // Function that returns most common date object from array of dates
+/*
 function getAverDate(dates) {
     var datesFreq = [];
     // calculate frequency of each date in dates array
@@ -145,22 +146,28 @@ function getAverDate(dates) {
     // return date object with highest value in datesFreq dict
     return new Date(Object.keys(datesFreq).reduce((a, b) => datesFreq[a] > datesFreq[b] ? a : b));
     }
+*/
+
+// Function that returns middle date object from array of dates
+function getAverDate(dates) {
+    return dates[Math.floor(dates.length / 2)];
+    }
 
 // Function that returns formatted labels of x axis
 function timeFormatter(d, dtArray) {
     var dt = dtArray[d];
     if (dt !== undefined) {
-        var hours = dt.getHours();
-        var minutes = (dt.getMinutes() < 10 ? '0' : '') + dt.getMinutes();
+        var hours = dt.getUTCHours();
+        var minutes = (dt.getUTCMinutes() < 10 ? '0' : '') + dt.getUTCMinutes();
         return hours + ':' + minutes;
     }
 }
 
 // Function that returns formatted date
 function dateFormatter(dt) {
-    var date = dt.getDate();
-    var month = (dt.getMonth() < 10 ? '0' : '') + (dt.getMonth()+1);
-    var year = dt.getFullYear();
+    var date = dt.getUTCDate();
+    var month = (dt.getUTCMonth() < 10 ? '0' : '') + (dt.getUTCMonth()+1);
+    var year = dt.getUTCFullYear();
     return date + '.' + month + '.' + year;
 }
 
