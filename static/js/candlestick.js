@@ -1,34 +1,36 @@
 function drawChart() {
-
-	d3.csv("/static/data/ohlc.csv").then(function (prices) {
-
-		// Define month names
-		const months = { 0: 'Jan', 1: 'Feb', 2: 'Mar', 3: 'Apr', 4: 'May', 5: 'Jun', 6: 'Jul', 7: 'Aug', 8: 'Sep', 9: 'Oct', 10: 'Nov', 11: 'Dec' }
-
+    
+    d3.json("/static/data/data.json").then(function(prices) {
+	
 		// define dateFormat function
-		var dateFormat = d3.timeParse("%Y-%m-%d");
+		var dateFormat = d3.timeParse("%Y-%m-%d-%H:%M:%S%Z");
 
 		// Parse dates
 		for (var i = 0; i < prices.length; i++) {
 			prices[i]['Date'] = dateFormat(prices[i]['Date'])
 		}
 
-		// define margin bounds for focus & context regions
-		const margin = { top: 15, right: 65, bottom: 235, left: 50 },
-			margin2 = { top: 680, right: 65, bottom: 80, left: 50 },
+		// get array of dates from data
+        let dates = prices.map(function(d,i){return d.Date;});
+	    
+        // calculate most common date
+
+        // define margin bounds for focus & context regions
+		const margin = { top: 15, right: 15, bottom: 80, left: 80 },
 			w = 1190 - margin.left - margin.right,
-			h = 820 - margin.top - margin.bottom,
-			h2 = 820 - margin2.top - margin2.bottom;
+			h = 820 - margin.top - margin.bottom;
 
 		// define svg dimensions
 		var svg = d3.select("#container").attr("width", w + margin.left + margin.right)
 					                     .attr("height", h + margin.top + margin.bottom);
 
+        // Draw outer frame
+        svg.append("rect").attr("id", "outerFrame")
+                          .attr("width", w + margin.left + margin.right)
+                          .attr("height", h + margin.top + margin.bottom);
+
 		// define chart dimensions
 		var focus = svg.append("g").attr("transform", "translate(" + margin.left + "," + margin.top + ")");
-
-		// get array of dates from data
-        let dates = prices.map(function(d,i){return d[0];});
 
 		// get min and max dates from data
         // getTime return number of milliseconds of date objects
@@ -50,18 +52,23 @@ function drawChart() {
                             .append("rect").attr("width", w)
 			                               .attr("height", h);
 
-		// Draw chart frame
-		focus.append("rect").attr("id", "chartFrame")
+		// Draw inner frame
+		focus.append("rect").attr("id", "innerFrame")
 			                .attr("width", w)
 			                .attr("height", h)
 			                .style("pointer-events", "all")
 			                .attr("clip-path", "url(#clip)");
 		
 		// Add x-axis to chart
-		var gX = focus.append("g").attr("class", "axis x-axis") //Assign "axis" class
+		var gX = focus.append("g").attr("class", "axis") //Assign "axis" class
 					              .attr("transform", "translate(0," + h + ")")
 					              .call(xAxis);
-		
+
+        // Draw x axis title
+        focus.append("text").attr("transform", "translate(" + (w/2) + " ," + (h + margin.top + margin.bottom/2) + ")")
+                          .style("text-anchor", "middle")
+                          .text("Date");
+
 		// adjust width of x labels
 		gX.selectAll(".tick text").call(wrap, xBand.bandwidth());
 		
@@ -72,11 +79,11 @@ function drawChart() {
 		// define linear y-axis scale
 		var yScale = d3.scaleLinear().domain([ymin, ymax]).range([h, 0]).nice();
 
-		// define y-axis and apply scale
-		var yAxis = d3.axisLeft().scale(yScale);
+		// define y-axis, apply scale and define label precision
+		var yAxis = d3.axisLeft().scale(yScale).tickFormat(function(d) { return parseFloat(d).toFixed(5); });
 		
 		// Add y-axis to chart
-		var gY = focus.append("g").attr("class", "axis y-axis")
+		var gY = focus.append("g").attr("class", "axis")
 			                      .call(yAxis);
 		
         // Define x gridlines
@@ -102,39 +109,36 @@ function drawChart() {
 			.data(prices)
 			.enter()
 			.append("rect")
-			.attr("class", "candle")
+			.attr("class", d => (d.Open <= d.Close) ? "candleUp" : "candleDown")
              // xBand.bandwidth() returns width of each candle (each band) 
 			.attr('x', (d, i) => xScale(i) - xBand.bandwidth())
 			.attr('y', d => yScale(Math.max(d.Open, d.Close)))
 			.attr('width', xBand.bandwidth())
              // yScale returns higher positions for lower prices
 			.attr('height', d => (d.Open === d.Close) ? 1 : yScale(Math.min(d.Open, d.Close)) - yScale(Math.max(d.Open, d.Close)))
-			.attr("fill", d => (d.Open === d.Close) ? "silver" : (d.Open > d.Close) ? "red" : "green");
 
 		// draw high-low lines in chart body
 		let stems = chartBody.selectAll("g.line")
 			.data(prices)
 			.enter()
 			.append("line")
-			.attr("class", "stem")
+			.attr("class", d => (d.Open <= d.Close) ? "stemUp" : "stemDown")
 			.attr("x1", (d, i) => xScale(i) - xBand.bandwidth() / 2)
 			.attr("x2", (d, i) => xScale(i) - xBand.bandwidth() / 2)
 			.attr("y1", d => yScale(d.High))
 			.attr("y2", d => yScale(d.Low))
-			.attr("stroke", d => (d.Open === d.Close) ? "white" : (d.Open > d.Close) ? "red" : "green");
+			//.attr("stroke", d => (d.Open === d.Close) ? "white" : (d.Open > d.Close) ? "red" : "green");
         
         // Define format of x labels
 		function dateFormatter(d) {
-			var d = dates[d]
-			if (d !== undefined) {
-				var hours = d.getHours();
-				var minutes = (d.getMinutes() < 10 ? '0' : '') + d.getMinutes();
-				var amPM = hours < 13 ? 'am' : 'pm';
-				return hours + ':' + minutes + amPM + ' ' + d.getDate() + ' ' + months[d.getMonth()] + ' ' + d.getFullYear();
+			var dt = dates[d]
+			if (dt !== undefined) {
+				var hours = dt.getHours();
+				var minutes = (dt.getMinutes() < 10 ? '0' : '') + dt.getMinutes();
+				return hours + ':' + minutes;
 			}
-		}
-
-	});
+        }
+    });
 }
 
 // Adjust width of x labels
