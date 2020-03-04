@@ -26,5 +26,9 @@ def animation():
 def intBarChart():
     return render_template("intBarChart.html")
 
+@app.route("/panningChart")
+def panningChart():
+    return render_template("panningChart.html")
+
 if __name__ == "__main__":
     app.run(debug=True)
