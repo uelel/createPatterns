@@ -1,54 +1,71 @@
-function chart() {
+// http://computationallyendowed.com/blog/2013/01/21/bounded-panning-in-d3.html
 
-  var width = 700, // default width
-      height = 400; // default height
+function myChart() {
   
-  // generate chart here, using `width` and `height`
-  d3.json("/static/data/dataExample.json").then(function(data) {
+	var random = d3.randomUniform(0,10);
+	var data = d3.range(0, 928, 8).map(function(e) {return [e, (e / 1000.0) * 30 + 100 * random()];});
+	var xmin = d3.min(data[0]),
+	    xmax = d3.max(data[0]),
+		ymin = d3.min(data[1]),
+		ymax = d3.max(data[1]);
+	 
+	var width = 700,
+        height = 400;
+	var margin = {top: 50, right: 50, bottom: 50, left: 50};
+	var w = width - margin.left - margin.right,
+		h = height - margin.top - margin.bottom;
 
-  var svg = d3.select("#container").attr("width", width)
-                                     .attr("height", height);
+	var svg = d3.select("body").append("svg").attr("width", 0)
+											 .attr("height", 0)
+											 .append("defs");
+											   
+	svg.append("clipPath").attr("id", "clip")
+		.append("rect").attr("width", width)
+			           .attr("height", height)
+					   .attr("x", 0)
+					   .attr("y", 0);
 
-  var xscale = d3.scaleLinear().domain([0, 100]).range([0, width]),
-      yscale = d3.scaleLinear().domain([0, 1000]).range([height, 0]);
-  
-  var xAxis = d3.axisBottom().scale(xscale);
-  var xG = svg.append("g").attr("class", "axis")
-                 .attr("transform", "translate(0," + height + ")")
-                 .call(xAxis);
+	chart = svg.append("g").attr("transform", "translate(" + margin.left + "," + margin.top + ")")
+			               .attr("clip-path", "url(#clip)");
 
-  var yAxis = d3.axisLeft().scale(yscale);
-  var yG = svg.append("g").attr("class", "axis")
-                   .call(yAxis);
+	var xscale = d3.scaleLinear().domain([xmin, xmax]).range([0, w]),
+		yscale = d3.scaleLinear().domain([ymin, ymax]).range([h, 0]);
+	  
+	var xaxis = d3.axisBottom(xscale);
+	var xg = chart.append("g").attr("class", "axis")
+							.attr("transform", "translate(0," + h + ")")
+							.attr('clip-path', 'url(#clip)')
+							.call(xaxis);
 
-  var line = d3.svg.line().x(function(d) { return xscale(d[0]); })
-                          .y(function(d) { return yscale(d[1]); })
-                          .interpolate('basis');
+	var yaxis = d3.axisLeft(yscale);
+	var yg = chart.append("g").attr("class", "axis")
+					          .call(yaxis);
 
-  svg.append('g').datum(data).append('path')
-                             .attr('class', 'data')
-                             .attr('d', line);
+	var line = d3.line().x(function(d) { return xscale(d[0]); })
+						.y(function(d) { return yscale(d[1]); })
+						.curve(d3.curveMonotoneX);
 
-  // create zoom object
-  // disable zooming (scale factor in one only)
-  var zoom = d3.zoom().scaleExtent([1, 1]);
+	chart.append('path').datum(data)
+						.attr('class', 'line')
+						.attr('d', line)
+						.attr('clip-path', 'url(#clip)');
 
-  // register callback on zoom event that redraw data
-  // call method that updates whole chart
-  zoom.on('zoom', pan);
-  
-  function pan() {
-    a = d3.event.transform.rescaleX(xscale);
-    xG.call(xAxis.scale(xscale));
-  }
-  
-  // 
-  svg.call(zoom);
-    
-    });
+	// create zoom object
+	// disable zooming (scale factor in one only)
+	var zoom = d3.zoom().scaleExtent([1, 1]);
 
-  return render;
+	function pan() {
+		//a = d3.event.transform.rescaleX(xscale);
+		xg.call(xaxis.scale(d3.event.transform.rescaleX(xscale)));
+	}
+
+	// register callback on zoom event that redraw data
+	// call method that updates whole chart
+	zoom.on('zoom', pan);
+	  
+	// 
+	chart.call(zoom);
+
 }
 
-myChart = chart();
 myChart();
