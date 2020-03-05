@@ -15,20 +15,19 @@ function myChart() {
 	var w = width - margin.left - margin.right,
 		h = height - margin.top - margin.bottom;
 
-	var svg = d3.select("body").append("svg").attr("width", 0)
-											 .attr("height", 0)
-											 .append("defs");
-											   
-	svg.append("clipPath").attr("id", "clip")
-		.append("rect").attr("width", width)
-			           .attr("height", height)
-					   .attr("x", 0)
-					   .attr("y", 0);
+	var svg = d3.select("body").append("svg")
+                  .attr("width", width)
+				  .attr("height", height);
+                
+	svg.append("defs")
+       .append("clipPath").attr("id", "clip")
+	   .append("rect").attr("width", width)
+			          .attr("height", height);
 
-	chart = svg.append("g").attr("transform", "translate(" + margin.left + "," + margin.top + ")")
-			               .attr("clip-path", "url(#clip)");
-
-	var xscale = d3.scaleLinear().domain([xmin, xmax]).range([0, w]),
+    var chart = svg.append("g").attr("transform", "translate(" + margin.left + "," + margin.top + ")")
+                   .attr("clip-path", "url(#clip)");
+    
+    var xscale = d3.scaleLinear().domain([xmin, xmax]).range([0, w]),
 		yscale = d3.scaleLinear().domain([ymin, ymax]).range([h, 0]);
 	  
 	var xaxis = d3.axisBottom(xscale);
@@ -55,8 +54,14 @@ function myChart() {
 	var zoom = d3.zoom().scaleExtent([1, 1]);
 
 	function pan() {
-		//a = d3.event.transform.rescaleX(xscale);
-		xg.call(xaxis.scale(d3.event.transform.rescaleX(xscale)));
+		// get translated x scale
+        var xscale_trans = d3.event.transform.rescaleX(xscale);
+		// update x axis
+        xg.call(xaxis.scale(xscale_trans));
+        // update line
+        line.x(function(d) { return xscale_trans(d[0]); });
+        // render line
+        chart.selectAll("path.line").datum(data).attr('d', line);
 	}
 
 	// register callback on zoom event that redraw data
