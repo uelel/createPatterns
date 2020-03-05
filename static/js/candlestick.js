@@ -1,8 +1,18 @@
-function drawChart() {
-    
-        d3.json("/static/data/data2.json").then(function(prices) {
-	
-		// define dateFormat function
+function drawChart(prices) {
+
+        // define margin bounds for focus & context regions
+		var width = 1190,
+			height = 820;
+		
+        var margin = { top: 15, right: 15, bottom: 80, left: 80 },
+			w = width - margin.left - margin.right,
+			h = height - margin.top - margin.bottom;
+		
+        // define axes' ranges
+        var xRange = 100,
+            yRange = 500;
+        
+        // define dateFormat function
 		var dateFormat = d3.timeParse("%Y-%m-%d-%H:%M:%S%Z");
 
 		// Parse dates
@@ -16,14 +26,38 @@ function drawChart() {
         // calculate most common date
         var averDate = getAverDate(dtArray);
 
-        // define margin bounds for focus & context regions
-		var width = 1190,
-			height = 820;
-		const margin = { top: 15, right: 15, bottom: 80, left: 80 },
-			  w = width - margin.left - margin.right,
-			  h = height - margin.top - margin.bottom;
+		// get min and max dates from data
+        // getTime return number of milliseconds of date objects
+		var xmin = d3.min(prices.map(row => row.Date.getTime()));
+		var xmax = d3.max(prices.map(row => row.Date.getTime()));
+        
+		// Get min and max prices from data
+		var ymin = d3.min(prices.map(row => row.Low));
+		var ymax = d3.max(prices.map(row => row.High));
+		
+        // define linear x-axis scale for positioning of candles
+		var xScale = d3.scaleLinear().domain([-1, dtArray.length]).range([0, w]);
 
-		// define svg dimensions
+		// define banded x-axis scale to account for padding between candles
+        // band scale accounts for padding between candles; range consists of x positions of candles
+		let xBand = d3.scaleBand().domain(d3.range(-1, dtArray.length)).range([0, w]).padding(0.3);
+
+		// define linear y-axis scale
+		var yScale = d3.scaleLinear().domain([ymin, ymax]).range([h, 0]).nice();
+		
+        // define x-axis, apply scale and tick formatting
+		var xAxis = d3.axisBottom().scale(xScale).tickFormat((d) => timeFormatter(d, dtArray));
+
+		// define y-axis, apply scale and define label precision
+		var yAxis = d3.axisLeft().scale(yScale).tickFormat(d3.format(".5f"));
+        
+        // Define x gridlines
+        var xGrid = d3.axisBottom().tickFormat("").tickSize(h).scale(xScale);
+        
+        // Define y gridlines
+        var yGrid = d3.axisLeft().tickFormat("").tickSize(-w).scale(yScale);
+        
+        // define svg dimensions
 		var svg = d3.select("#container").attr("width", width)
 					                     .attr("height", height);
 
@@ -34,21 +68,6 @@ function drawChart() {
 
 		// define chart dimensions
 		var focus = svg.append("g").attr("transform", "translate(" + margin.left + "," + margin.top + ")");
-
-		// get min and max dates from data
-        // getTime return number of milliseconds of date objects
-		var xmin = d3.min(prices.map(row => row.Date.getTime()));
-		var xmax = d3.max(prices.map(row => row.Date.getTime()));
-
-		// define linear x-axis scale for positioning of candles
-		var xScale = d3.scaleLinear().domain([-1, dtArray.length]).range([0, w]);
-
-		// define banded x-axis scale to account for padding between candles
-        // band scale accounts for padding between candles; range consists of x positions of candles
-		let xBand = d3.scaleBand().domain(d3.range(-1, dtArray.length)).range([0, w]).padding(0.3);
-
-		// define x-axis, apply scale and tick formatting
-		var xAxis = d3.axisBottom().scale(xScale).tickFormat((d) => timeFormatter(d, dtArray));
 		
 		// append clipPath to focus
 		focus.append("defs").append("clipPath").attr("id", "clip")
@@ -73,32 +92,16 @@ function drawChart() {
                           .text(dateFormatter(averDate));
 
 		// adjust width of x labels
-		gX.selectAll(".tick text").call(wrap, xBand.bandwidth());
+		//gX.selectAll(".tick text").call(wrap, xBand.bandwidth());
 		
-		// Get min and max prices from data
-		var ymin = d3.min(prices.map(row => row.Low));
-		var ymax = d3.max(prices.map(row => row.High));
-
-		// define linear y-axis scale
-		var yScale = d3.scaleLinear().domain([ymin, ymax]).range([h, 0]).nice();
-
-		// define y-axis, apply scale and define label precision
-		var yAxis = d3.axisLeft().scale(yScale).tickFormat(d3.format(".5f"));
-		
-		// Add y-axis to chart
+		// Render y-axis
 		var gY = focus.append("g").attr("class", "axis")
 			                      .call(yAxis);
 		
-        // Define x gridlines
-        var xGrid = d3.axisBottom().tickFormat("").tickSize(h).scale(xScale);
-        
-        // Add x gridlines to chart
+        // Render x gridlines
         focus.append("g").attr("class", "grid").call(xGrid);
         
-        // Define y gridlines
-        var yGrid = d3.axisLeft().tickFormat("").tickSize(-w).scale(yScale);
-        
-        // Add y gridlines to chart
+        // Render y gridlines
         focus.append("g").attr("class", "grid").call(yGrid);
 
 		// add clip-path to chart body
@@ -131,9 +134,7 @@ function drawChart() {
 			.attr("y1", d => yScale(d.High))
 			.attr("y2", d => yScale(d.Low))
 			//.attr("stroke", d => (d.Open === d.Close) ? "white" : (d.Open > d.Close) ? "red" : "green");
-        
-
-    });
+    
 }
 
 // Function that returns most common date object from array of dates
@@ -205,4 +206,5 @@ function wrap(text, width) {
 	});
 }
 
-drawChart();
+
+d3.json("/static/data/data2.json").then(function(prices) { drawChart(prices); })
