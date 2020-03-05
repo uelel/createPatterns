@@ -17,18 +17,20 @@ function drawChart() {
         var averDate = getAverDate(dtArray);
 
         // define margin bounds for focus & context regions
+		var width = 1190,
+			height = 820;
 		const margin = { top: 15, right: 15, bottom: 80, left: 80 },
-			w = 1190 - margin.left - margin.right,
-			h = 820 - margin.top - margin.bottom;
+			  w = width - margin.left - margin.right,
+			  h = height - margin.top - margin.bottom;
 
 		// define svg dimensions
-		var svg = d3.select("#container").attr("width", w + margin.left + margin.right)
-					                     .attr("height", h + margin.top + margin.bottom);
+		var svg = d3.select("#container").attr("width", width)
+					                     .attr("height", height);
 
         // Draw outer frame
         svg.append("rect").attr("id", "outerFrame")
-                          .attr("width", w + margin.left + margin.right)
-                          .attr("height", h + margin.top + margin.bottom);
+                          .attr("width", width)
+                          .attr("height", height);
 
 		// define chart dimensions
 		var focus = svg.append("g").attr("transform", "translate(" + margin.left + "," + margin.top + ")");
