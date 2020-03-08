@@ -13,11 +13,14 @@ function drawChart(pricesArray) {
 		
 		// define range of y axis
         var yRange = 0.002;
+
+        // define number of minutes between x ticks
+        var xStep = 15;
 		
 		// define step of y ticks
 		var yStep = 0.0001;
 		
-		// define number of decimal precision of y labels
+		// define number of decimal points of y labels
 		var yPrecision = 5;
         
 		// Parse dates
@@ -29,36 +32,37 @@ function drawChart(pricesArray) {
 		// calculate most common date
         var averDate = getAverDate(dtArray, dtArray.length - noCandles, dtArray.length);
 		
+        // define timeScale for relating between dates and their indices
+        var dateIndScale = d3.scaleTime().domain([dtArray[0], dtArray.slice(-1)[0]]).range([0, dtArray.length-1]);
+
         // define linear x-axis scale for positioning of candles
 		// inital scale displays noCandles of most recent candles
-		var xScale = d3.scaleLinear().domain([dtArray.length - noCandles, dtArray.length]).range([0, w]);
+		var xScale = d3.scaleTime().domain([dateIndScale.invert(dtArray.length-noCandles), dtArray.slice(-1)[0]]).range([0, w]);
 
 		// define banded x-axis scale to account for padding between candles
         // band scale accounts for padding between candles; range consists of x positions of candles
-		let xBand = d3.scaleBand().domain(d3.range(dtArray.length - noCandles, dtArray.length)).range([0, w]).padding(0.3);
+		var xBand = d3.scaleBand().domain(d3.range(dtArray.length - noCandles, dtArray.length)).range([0, w]).padding(0.3);
 		
 		// get initial limits of y axis
-		var yLimitArray = getYLimits(pricesArray, xScale.domain()[0], xScale.domain()[1], yRange, yPrecision);
-		console.log(yLimitArray);
+		var yLimitArray = getYLimits(pricesArray, dtArray.length-noCandles, dtArray.length, yRange, yPrecision);
 		
 		// create array with y labels
-		var yLabelsArray = createYLabels(yLimitArray[0], yLimitArray[1], yStep, yPrecision);
-		console.log(yLabelsArray);
+		var yTicksArray = createYTicks(yLimitArray[0], yLimitArray[1], yStep, yPrecision);
 		
 		// define linear y-axis scale
 		var yScale = d3.scaleLinear().domain([yLimitArray[0], yLimitArray[1]]).range([h, 0]);
 		
         // define x-axis, apply scale and tick formatting
-		var xAxis = d3.axisBottom().scale(xScale).tickFormat((d) => timeFormatter(d, dtArray));
+		var xAxis = d3.axisBottom().scale(xScale).ticks(d3.timeMinute.every(xStep)).tickFormat(timeFormatter);
 
 		// define y-axis, apply scale and define label values and precision
-		var yAxis = d3.axisLeft().scale(yScale).tickValues(yLabelsArray).tickFormat(d3.format(".5f"));
+		var yAxis = d3.axisLeft().scale(yScale).tickValues(yTicksArray).tickFormat(d3.format("."+yPrecision+"f"));
         
         // Define x gridlines
-        var xGrid = d3.axisBottom().tickFormat("").tickSize(h).scale(xScale);
+        var xGrid = d3.axisBottom().scale(xScale).ticks(d3.timeMinute.every(xStep)).tickFormat("").tickSize(h);
         
         // Define y gridlines
-        var yGrid = d3.axisLeft().scale(yScale).tickValues(yLabelsArray).tickFormat("").tickSize(-w);
+        var yGrid = d3.axisLeft().scale(yScale).tickValues(yTicksArray).tickFormat("").tickSize(-w);
 		
 		// create zoom object
 		// disable zooming (scale factor in one only)
@@ -70,26 +74,52 @@ function drawChart(pricesArray) {
 		
 		// define what should be re-rendered during zoom event
 		function pan() {
-		// get translated x scale
-		var xScaleTrans = d3.event.transform.rescaleX(xScale);
-		// update x axis
-		gX.call(xAxis.scale(xScaleTrans));	
 		
-		// update candle body
-		candles.attr("class", d => (d.Open <= d.Close) ? "candleUp" : "candleDown")
-			   .attr('x', (d, i) => xScaleTrans(i) - xBand.bandwidth())
-			   .attr('y', d => yScale(Math.max(d.Open, d.Close)))
-			   .attr('width', xBand.bandwidth())
-			   .attr('height', d => (d.Open === d.Close) ? 1 : yScale(Math.min(d.Open, d.Close)) - yScale(Math.max(d.Open, d.Close)))
-			   .attr("clip-path", "url(#clip)");
+            // get translated x scale
+            var xScaleTrans = d3.event.transform.rescaleX(xScale);
 
-		// update candle stem
-		stems.attr("class", d => (d.Open <= d.Close) ? "stemUp" : "stemDown")
-			 .attr("x1", (d, i) => xScaleTrans(i) - xBand.bandwidth() / 2)
-			 .attr("x2", (d, i) => xScaleTrans(i) - xBand.bandwidth() / 2)
-			 .attr("y1", d => yScale(d.High))
-			 .attr("y2", d => yScale(d.Low))
-			 .attr("clip-path", "url(#clip)");
+            // update x axis
+            gX.call(xAxis.scale(xScaleTrans));
+
+            // update x grid
+            gGX.call(xGrid.scale(xScaleTrans));
+            
+            // get limits of y axis
+            var yLimitArray = getYLimits(pricesArray, Math.floor(dateIndScale(xScaleTrans.domain()[0])), Math.floor(dateIndScale(xScaleTrans.domain()[1])), yRange, yPrecision);
+
+            // get value of y ticks
+            var yTicksArray = createYTicks(yLimitArray[0], yLimitArray[1], yStep, yPrecision);
+
+            // update yScale
+            var yScaleTrans = d3.scaleLinear().domain([yLimitArray[0], yLimitArray[1]]).range([h, 0]);
+
+            // update yAxis
+            gY.call(yAxis.scale(yScaleTrans).tickValues(yTicksArray));
+
+            // update yGrid
+            gGY.call(yGrid.scale(yScaleTrans).tickValues(yTicksArray));
+            
+            // calculate most common date
+            var averDate = getAverDate(dtArray, Math.floor(dateIndScale(xScaleTrans.domain()[0])), Math.floor(dateIndScale(xScaleTrans.domain()[1])));
+
+            // update x title
+            xTitle.text(dateFormatter(averDate));
+
+            // update candle body
+            candles.attr("class", d => (d.Open <= d.Close) ? "candleUp" : "candleDown")
+                   .attr('x', d => xScaleTrans(d.Date) - xBand.bandwidth())
+                   .attr('y', d => yScaleTrans(Math.max(d.Open, d.Close)))
+                   .attr('width', xBand.bandwidth())
+                   .attr('height', d => (d.Open === d.Close) ? 1 : yScaleTrans(Math.min(d.Open, d.Close)) - yScaleTrans(Math.max(d.Open, d.Close)))
+                   .attr("clip-path", "url(#clip)");
+
+            // update candle stem
+            stems.attr("class", d => (d.Open <= d.Close) ? "stemUp" : "stemDown")
+                 .attr("x1", d => xScaleTrans(d.Date) - xBand.bandwidth() / 2)
+                 .attr("x2", d => xScaleTrans(d.Date) - xBand.bandwidth() / 2)
+                 .attr("y1", d => yScaleTrans(d.High))
+                 .attr("y2", d => yScaleTrans(d.Low))
+                 .attr("clip-path", "url(#clip)");
 		}
         
 		/* Draw chart*/
@@ -122,27 +152,23 @@ function drawChart(pricesArray) {
 			                .attr("clip-path", "url(#clip)");
 		
 		// Draw x axis
-		var gX = focus.append("g").attr("class", "axis") //Assign "axis" class
+		var gX = focus.append("g").attr("class", "axis") // Assign "axis" class
 					              .attr("transform", "translate(0," + h + ")")
 					              .call(xAxis);
 
         // Draw x axis title
-        focus.append("text").attr("transform", "translate(" + (w/2) + " ," + (h + margin.top + margin.bottom/2) + ")")
+        var xTitle = focus.append("text").attr("transform", "translate(" + (w/2) + " ," + (h + margin.top + margin.bottom/2) + ")")
                           .style("text-anchor", "middle")
                           .text(dateFormatter(averDate));
 
-		// adjust width of x labels
-		//gX.selectAll(".tick text").call(wrap, xBand.bandwidth());
-		
 		// Draw y-axis
-		var gY = focus.append("g").attr("class", "axis")
-			                      .call(yAxis);
+		var gY = focus.append("g").attr("class", "axis").call(yAxis);
 		
         // Draw x gridlines
-        focus.append("g").attr("class", "grid").call(xGrid);
+        var gGX = focus.append("g").attr("class", "grid").call(xGrid);
         
         // Draw y gridlines
-        focus.append("g").attr("class", "grid").call(yGrid);
+        var gGY = focus.append("g").attr("class", "grid").call(yGrid);
 
 		// add clip-path to chart body
 		var chartBody = focus.append("g").attr("class", "chartBody")
@@ -157,7 +183,7 @@ function drawChart(pricesArray) {
 			.append("rect")
 			.attr("class", d => (d.Open <= d.Close) ? "candleUp" : "candleDown")
              // xBand.bandwidth() returns width of each candle (each band) 
-			.attr('x', (d, i) => xScale(i) - xBand.bandwidth())
+			.attr('x', d => xScale(d.Date) - xBand.bandwidth())
 			.attr('y', d => yScale(Math.max(d.Open, d.Close)))
 			.attr('width', xBand.bandwidth())
              // yScale returns higher positions for lower prices
@@ -170,8 +196,8 @@ function drawChart(pricesArray) {
 			.enter()
 			.append("line")
 			.attr("class", d => (d.Open <= d.Close) ? "stemUp" : "stemDown")
-			.attr("x1", (d, i) => xScale(i) - xBand.bandwidth() / 2)
-			.attr("x2", (d, i) => xScale(i) - xBand.bandwidth() / 2)
+			.attr("x1", d => xScale(d.Date) - xBand.bandwidth() / 2)
+			.attr("x2", d => xScale(d.Date) - xBand.bandwidth() / 2)
 			.attr("y1", d => yScale(d.High))
 			.attr("y2", d => yScale(d.Low))
 			.attr("clip-path", "url(#clip)");
@@ -196,15 +222,8 @@ function getAverDate(datesArray, startInd, endInd) {
     return arraySlice[Math.floor(arraySlice.length / 2)];
     }
 
-// Function that returns formatted labels of x axis
-function timeFormatter(d, dtArray) {
-    var dt = dtArray[d];
-    if (dt !== undefined) {
-		var hours = (dt.getUTCHours() < 10 ? '0' : '') + dt.getUTCHours();
-        var minutes = (dt.getUTCMinutes() < 10 ? '0' : '') + dt.getUTCMinutes();
-        return hours + ':' + minutes;
-    }
-}
+// Function that convert x labels to UTC timezone
+function timeFormatter(dt) { return moment(dt).tz('UTC').format('HH:mm'); }
 
 // Function that returns formatted date
 function dateFormatter(dt) {
@@ -224,45 +243,13 @@ function getYLimits(pricesArray, dtArrayStart, dtArrayEnd, yRange, yPrec) {
 	return [roundFloat(middlePrice - yRange/2, yPrec), roundFloat(middlePrice + yRange/2, yPrec)];
 }
 
-// function that creates array with y labels
-function createYLabels(minValue, maxValue, step, prec) {
+// function that creates array with y ticks
+function createYTicks(minValue, maxValue, step, prec) {
 	var labelsArray = [];
 	for (i = minValue; i <= maxValue; i += step) {
 		labelsArray.push(roundFloat(i, prec));
 	}
 	return labelsArray;
-}
-
-// Adjust width of x labels
-function wrap(text, width) {
-	text.each(function () {
-            // get label element
-		var text = d3.select(this),
-            // get text of label element
-            // split text by spaces
-            // reverse resulting array
-			words = text.text().split(/\s+/).reverse(),
-			word,
-			line = [],
-			lineNumber = 0,
-			lineHeight = 1.1, // ems
-			y = text.attr("y"),
-			dy = parseFloat(text.attr("dy")),
-			tspan = text.text(null).append("tspan").attr("x", 0).attr("y", y).attr("dy", dy + "em");
-		// loop over words array
-        while (word = words.pop()) {
-            // add word to array
-			line.push(word);
-			tspan.text(line.join(" "));
-            // create tspan element with so many words that its width < limit
-			if (tspan.node().getComputedTextLength() > width) {
-				line.pop();
-				tspan.text(line.join(" "));
-				line = [word];
-				tspan = text.append("tspan").attr("x", 0).attr("y", y).attr("dy", ++lineNumber*lineHeight + dy + "em").text(word);
-			}
-		}
-	});
 }
 
 
