@@ -1,10 +1,32 @@
-from flask import Flask, render_template      
+from flask import Flask, render_template, Response, request
+import json
+
+# Specify whether data should be loaded from file instead of influxdb
+loadFromFile = True
+fileName = ''
+
+# Specify number of preloaded candles
+loadNoCandles = 2000
 
 app = Flask(__name__, static_url_path='/static')
 
 @app.route("/")
 def home():
-    return render_template("index.html")
+    return render_template('index.html')
+	
+@app.route("/getData")
+def getData():
+	# Return data from Python variable
+	response = Response(response=python_variable, status=200, mimetype="application/json")
+    return(response)
+
+@app.route("/loadNewData")
+def loadNewData():
+
+	dateLimit = request.form['dateLimit']
+	direction = request.form['dir']
+	
+	# Load new data from file/influxdb
 
 @app.route("/barChart")
 def barChart():
