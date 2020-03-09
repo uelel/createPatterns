@@ -16,8 +16,8 @@ def home():
 	
 @app.route("/getData")
 def getData():
-	# Return data from Python variable
-	response = Response(response=python_variable, status=200, mimetype="application/json")
+    # Return data from Python variable
+    response = Response(response=python_variable, status=200, mimetype="application/json")
     return(response)
 
 @app.route("/loadNewData")

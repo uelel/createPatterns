@@ -253,5 +253,5 @@ function createYTicks(minValue, maxValue, step, prec) {
 }
 
 
-d3.json("/static/data/data3.json").then(function(prices) { drawChart(prices); })
-								  .error(function(error) { console.log(error); });
+d3.json("/static/data/data.json").then(function(prices) { drawChart(prices); },
+								       function(error) { console.log(error); });
