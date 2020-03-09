@@ -15,18 +15,26 @@ label {
 
 input {
   border: 1px solid grey;
-  border-left-width: 3px;
-  border-left-color: green;
-  border-radius: 3px;
+  border-top-left-radius: 0px;
+  border-bottom-left-radius: 0px;
+  border-top-right-radius: 3px;
+  border-bottom-right-radius: 3px;
   padding: 2px 4px;
   text-align: left;
-  display: inline-block;
   text-align: left;
 }
 
-input.dt {
-	background: url(static/comment-author.gif) no-repeat scroll 7px 7px;
-	padding-left:30px;
+.inputIcon {
+  border: 1px solid grey;
+  border-top-left-radius: 3px;
+  border-bottom-left-radius: 3px;
+  border-top-right-radius: 0px;
+  border-bottom-right-radius: 0px;
+  width: 25px;
+  margin-right: -1px;
+  padding: 2px 4px;
+  text-align: center;
+  background-color: #d3d3d3;
 }
 
 .initForm {

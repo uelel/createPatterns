@@ -29,15 +29,17 @@ gran.append("xhtml:input").attr("type", "text")
 								 .attr("value", "M1")
 								 .attr("name", "gran");
 
-var initDt = initForm.append("xhtml:div").style("position", "relative");
+var initDt = initForm.append("xhtml:div").style("position", "relative")
+                                         .style("display", "flex");
 initDt.append("xhtml:label").text("Initial date and time:")
 							.attr("for", "initDt");
-var initDtInput = initDt.append("xhtml:div")
-											.style("display", "inline");
-initDtInput.append("xhtml:span").attr("class", "inputIcon").append("xhtml:span").attr("class", "glyphicon glyphicon-calendar");
+var initDtInput = initDt.append("xhtml:div");
+initDtInput.append("xhtml:label").attr("class", "inputIcon")
+                                 .attr("for", "dateTimePicker")
+           .append("xhtml:span").attr("class", "glyphicon glyphicon-calendar");
 initDtInput.append("xhtml:input").attr("type", "text")
 							     .attr("name", "initDt")
-								 .attr("id", "dateTimePicker");
+                                 .attr("id", "dateTimePicker");
 								 
 var noCandles = initForm.append("xhtml:div");
 noCandles.append("xhtml:label").text("Number of displayed candles:")
@@ -74,6 +76,5 @@ yPrec.append("xhtml:input").attr("type", "text")
 								 .attr("value", "5")
 								 .attr("name", "yPrec");
 								 
-
 
 $('#dateTimePicker').datetimepicker({format: 'DD.MM.YYYY HH:mm', defaultDate: new Date()});
