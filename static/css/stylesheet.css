@@ -3,6 +3,35 @@ body {
   font-family: 'Open Sans', sans-serif;
   font-size: 14px;
   fill: black;
+  position: relative;
+}
+
+label {
+  	margin-right:15px;
+	text-align: right;
+	display: inline-block;
+	width: 250px;
+}
+
+input {
+  border: 1px solid grey;
+  border-left-width: 3px;
+  border-left-color: green;
+  border-radius: 3px;
+  padding: 2px 4px;
+  text-align: left;
+  display: inline-block;
+  text-align: left;
+}
+
+input.dt {
+	background: url(static/comment-author.gif) no-repeat scroll 7px 7px;
+	padding-left:30px;
+}
+
+.initForm {
+  text-align: left;
+  border: 1px solid grey;
 }
 
 #outerFrame {
