@@ -2,25 +2,31 @@ body {
   background-color: white;
   font-family: 'Open Sans', sans-serif;
   font-size: 14px;
-  fill: black;
-  position: relative;
+}
+
+#initForm {
+	text-align: justify;
+	border: 0px solid grey;
+	width: 600px;
+	height: 500px;
+	transform: translate(27%, 30%);
 }
 
 label {
-  	margin-right:15px;
+  	margin-right: 15px;
 	text-align: right;
 	display: inline-block;
 	width: 250px;
+	font-weight: normal !important;
 }
 
-input {
+input, select {
   border: 1px solid grey;
   border-top-left-radius: 0px;
   border-bottom-left-radius: 0px;
   border-top-right-radius: 3px;
   border-bottom-right-radius: 3px;
-  padding: 2px 4px;
-  text-align: left;
+  padding: 2px 4px 2px 4px;
   text-align: left;
 }
 
@@ -37,9 +43,8 @@ input {
   background-color: #d3d3d3;
 }
 
-.initForm {
-  text-align: left;
-  border: 1px solid grey;
+#initFormButton {
+	text-align: center;
 }
 
 #outerFrame {
