@@ -1,4 +1,4 @@
-from flask import Flask, render_template, Response, request
+from flask import Flask, render_template, Response, request, jsonify
 import json
 
 # Specify whether data should be loaded from file instead of influxdb
@@ -20,11 +20,14 @@ def getData():
     response = Response(response=python_variable, status=200, mimetype="application/json")
     return(response)
 
-@app.route("/loadNewData")
+@app.route("/loadNewData", methods=['POST'])
 def loadNewData():
 
-	dateLimit = request.form['dateLimit']
-	direction = request.form['dir']
+	#print(request)
+	#dateLimit = request.form.get['dateLimit']
+	#direction = request.form.get['dir']
+	
+	return jsonify('message loaded')
 	
 	# Load new data from file/influxdb
 
