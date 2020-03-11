@@ -1,9 +1,10 @@
-function loadNewData(messageArray) {
-    fetch('/loadNewData', {
+function serverRequest(requestName, messageArray) {
+    fetch(requestName, {
+        headers: {'Content-Type': 'application/json'},
         method: 'POST',
         body: JSON.stringify(messageArray)
     }).then((response) => {
-    return response;
+    return response.json();
   })
   .then((data) => {
     console.log(data);
@@ -26,27 +27,35 @@ svg.append("rect").attr("id", "outerFrame")
 // Draw initial form
 var initForm = createInitForm(svg);
 
-// Define action on form submit
+// Define actions on form submit
 $(document).ready(function() {
     $('#initForm').submit(function(e) {
+        
         // Prevent reloading the page after submit
 		e.preventDefault();
+        
         // Serialize form values
 		var values = {};
         $.each($(this).serializeArray(), function(i, field) {
             if (field.name == "initDt") {
                 let dt = moment.utc(field.value, 'DD.MM.YYYY HH:mm');
-                values[field.name] = dt.format('YYYY-MM-DDTHH:mmZ');
+                values[field.name] = dt.format('YYYY-MM-DDTHH:mm:SS[Z]');
             } 
 			else { 
 				values[field.name] = field.value; 
 			}
         });       
+        
+        // Call dataInit request
+        var response = serverRequest('\dataInit', values);
+
         // Create message for loading data
 		var message = {};
-		message['dateLimit'] = values['initDt'];
+		message['dtLimit'] = values['initDt'];
 		message['dir'] = 'left';
-		// Call loadingNewData
-		var response = loadNewData(message);
+        console.log(message);
+		
+        // Call loadNewData request
+		var response = serverRequest('\loadNewData', message);
     });
 });

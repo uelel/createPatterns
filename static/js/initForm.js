@@ -3,6 +3,21 @@ function createInitForm(svg) {
     var initForm = svg.append("foreignObject").attr("id", "initObject")
                       .append("xhtml:form").attr("id", "initForm");
                                  
+    var loadMethod = initForm.append("xhtml:div");
+    loadMethod.append("xhtml:label").text("Loading method:")
+                                    .attr("for", "loadMethod");
+    var loadMethodSel = loadMethod.append("xhtml:select").attr("name", "loadMethod");
+    loadMethodSel.append("xhtml:option").attr("value", "influxdb").text("influxdb");
+    loadMethodSel.append("xhtml:option").attr("value", "file").text("file");
+
+    var dbName = initForm.append("xhtml:div");
+    dbName.append("xhtml:label").text("Database name:")
+                                .attr("for", "dbName");
+    dbName.append("xhtml:input").attr("type", "text")
+                                .attr("value", "oanda.eurusd.M1")
+                                .attr("name", "dbName");
+
+    /*
     var pair = initForm.append("xhtml:div");
     pair.append("xhtml:label").text("Pair:")
                               .attr("for", "pair");
@@ -13,7 +28,8 @@ function createInitForm(svg) {
     gran.append("xhtml:label").text("Granularity:")
                               .attr("for", "gran");
     gran.append("xhtml:select").attr("name", "gran")
-        .append("xhtml:option").attr("value", "m1").text("M1");
+        .append("xhtml:option").attr("value", "M1").text("M1");
+    */
 
     var initDt = initForm.append("xhtml:div").style("position", "relative")
                                              .style("display", "flex");
