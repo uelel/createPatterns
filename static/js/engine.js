@@ -1,14 +1,9 @@
 function serverRequest(requestName, messageArray) {
-    fetch(requestName, {
-        headers: {'Content-Type': 'application/json'},
-        method: 'POST',
-        body: JSON.stringify(messageArray)
-    }).then((response) => {
-    return response.json();
-  })
-  .then((data) => {
-    console.log(data);
-  });
+    return fetch('/'+requestName, {headers: {'Content-Type': 'application/json'},
+                                   method: 'POST',
+                                   body: JSON.stringify(messageArray)})
+          .then((response) => response.json())
+          .then((data) => console.log(data));
 }
 
 // define margin bounds for focus & context regions
@@ -35,27 +30,36 @@ $(document).ready(function() {
 		e.preventDefault();
         
         // Serialize form values
-		var values = {};
+		var pars = {};
         $.each($(this).serializeArray(), function(i, field) {
             if (field.name == "initDt") {
                 let dt = moment.utc(field.value, 'DD.MM.YYYY HH:mm');
-                values[field.name] = dt.format('YYYY-MM-DDTHH:mm:SS[Z]');
+                pars[field.name] = dt.format('YYYY-MM-DDTHH:mm:SS[Z]');
             } 
 			else { 
-				values[field.name] = field.value; 
+				pars[field.name] = field.value; 
 			}
-        });       
+        });
+        console.log(pars);
         
-        // Call dataInit request
-        var response = serverRequest('\dataInit', values);
+        // Call initData request
+        serverRequest('initData', pars);
 
         // Create message for loading data
 		var message = {};
-		message['dtLimit'] = values['initDt'];
+		message['dtLimit'] = pars['initDt'];
 		message['dir'] = 'left';
         console.log(message);
 		
         // Call loadNewData request
-		var response = serverRequest('\loadNewData', message);
+		var promise = serverRequest('loadNewData', message);
+        
+        // After loadNewData finishes
+        promise.then(function(){
+        // move initial form
+        initForm.remove();
+        // draw candlestick chart
+        drawChart(pars);
+        });
     });
 });

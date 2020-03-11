@@ -243,7 +243,7 @@ function getYLimits(pricesArray, dtArrayStart, dtArrayEnd, yRange, yPrec) {
 	return [roundFloat(middlePrice - yRange/2, yPrec), roundFloat(middlePrice + yRange/2, yPrec)];
 }
 
-// function that creates array with y ticks
+// Function that creates array with y ticks
 function createYTicks(minValue, maxValue, step, prec) {
 	var labelsArray = [];
 	for (i = minValue; i <= maxValue; i += step) {
@@ -253,4 +253,5 @@ function createYTicks(minValue, maxValue, step, prec) {
 }
 
 
-d3.json("/static/data/data3.json").then(function(prices) { drawChart(prices); });
+d3.json("/static/data/data.json").then(function(prices) { drawChart(prices); },
+								       function(error) { console.log(error); });
