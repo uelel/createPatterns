@@ -20,6 +20,10 @@ label {
 	font-weight: normal !important;
 }
 
+label.special {
+    line-height: 26px;
+}
+
 input, select {
   border: 1px solid grey;
   border-top-left-radius: 0px;
@@ -31,16 +35,15 @@ input, select {
 }
 
 .fileUpload {
-	opacity: 0;
-	position: absolute;
-	  top: 0;
-  left: 0;
-	z-index: 1;
+    position: relative;
 }
 
-.fileInput {
+.fileUploadHidden {
+	opacity: 0;
 	position: absolute;
-	
+	top: 0;
+    left: 0;
+	z-index: 1;
 }
 
 .inputIcon {

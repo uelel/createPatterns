@@ -15,18 +15,16 @@ function createInitForm(svg) {
     
 	name.append("xhtml:label").text("Choose data file:")
 							  .attr("for", "filePath")
-							  .style("line-height", "26px");
-	name.append("xhtml:input").attr("type", "file")
-							  .attr("name", "filePath")
-							  .attr("class", "fileUpload");
-    var fileInput = name.append("xhtml:div");
-    fileInput.append("xhtml:label").attr("class", "inputIcon")
-                                     .attr("for", "fileInput")
-               .append("xhtml:span").attr("class", "glyphicon glyphicon-folder-open");
-    fileInput.append("xhtml:input").attr("type", "text")
-                                     .attr("name", "fileInput")
-                                     .attr("id", "fileInput")
-									 .attr("class", "fileInput");
+							  .attr("class", "special");
+	var fileUpload = name.append("xthml:div").attr("class", "fileUpload");
+    fileUpload.append("xhtml:input").attr("type", "file")
+							        .attr("name", "filePath")
+							        .attr("class", "fileUploadHidden");
+    var fileUploadVisible = fileUpload.append("xhtml:div");
+    fileUploadVisible.append("xhtml:label").attr("class", "inputIcon")
+                     .append("xhtml:span").attr("class", "glyphicon glyphicon-folder-open");
+    fileUploadVisible.append("xhtml:input").attr("type", "text")
+                                     .attr("value", "No file chosen...                    ");
 	
 	/* http://jsfiddle.net/spanndemic/5JRMt/
 	name.append("xhtml:label").text("Database name:")
@@ -40,7 +38,7 @@ function createInitForm(svg) {
                                              .style("display", "flex");
     initDt.append("xhtml:label").text("Initial date and time:")
                                 .attr("for", "initDt")
-                                .style("line-height", "26px");
+                                .attr("class", "special");
     var initDtInput = initDt.append("xhtml:div");
     initDtInput.append("xhtml:label").attr("class", "inputIcon")
                                      .attr("for", "dateTimePicker")
