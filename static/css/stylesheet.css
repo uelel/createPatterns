@@ -30,6 +30,19 @@ input, select {
   text-align: left;
 }
 
+.fileUpload {
+	opacity: 0;
+	position: absolute;
+	  top: 0;
+  left: 0;
+	z-index: 1;
+}
+
+.fileInput {
+	position: absolute;
+	
+}
+
 .inputIcon {
   border: 1px solid grey;
   border-top-left-radius: 3px;

@@ -10,28 +10,33 @@ function createInitForm(svg) {
     loadMethodSel.append("xhtml:option").attr("value", "influxdb").text("influxdb");
     loadMethodSel.append("xhtml:option").attr("value", "file").text("file");
 
-    var dbName = initForm.append("xhtml:div");
-    dbName.append("xhtml:label").text("Database name:")
+    var name = initForm.append("xhtml:div").style("position", "relative")
+										   .style("display", "flex");
+    
+	name.append("xhtml:label").text("Choose data file:")
+							  .attr("for", "filePath")
+							  .style("line-height", "26px");
+	name.append("xhtml:input").attr("type", "file")
+							  .attr("name", "filePath")
+							  .attr("class", "fileUpload");
+    var fileInput = name.append("xhtml:div");
+    fileInput.append("xhtml:label").attr("class", "inputIcon")
+                                     .attr("for", "fileInput")
+               .append("xhtml:span").attr("class", "glyphicon glyphicon-folder-open");
+    fileInput.append("xhtml:input").attr("type", "text")
+                                     .attr("name", "fileInput")
+                                     .attr("id", "fileInput")
+									 .attr("class", "fileInput");
+	
+	/* http://jsfiddle.net/spanndemic/5JRMt/
+	name.append("xhtml:label").text("Database name:")
                                 .attr("for", "dbName");
-    dbName.append("xhtml:input").attr("type", "text")
+    name.append("xhtml:input").attr("type", "text")
                                 .attr("value", "oanda.eurusd.M1")
                                 .attr("name", "dbName");
-
-    /*
-    var pair = initForm.append("xhtml:div");
-    pair.append("xhtml:label").text("Pair:")
-                              .attr("for", "pair");
-    pair.append("xhtml:select").attr("name", "pair")
-        .append("xhtml:option").attr("value", "eurusd").text("EURUSD");
-                                     
-    var gran = initForm.append("xhtml:div");
-    gran.append("xhtml:label").text("Granularity:")
-                              .attr("for", "gran");
-    gran.append("xhtml:select").attr("name", "gran")
-        .append("xhtml:option").attr("value", "M1").text("M1");
-    */
-
-    var initDt = initForm.append("xhtml:div").style("position", "relative")
+	*/
+    
+	var initDt = initForm.append("xhtml:div").style("position", "relative")
                                              .style("display", "flex");
     initDt.append("xhtml:label").text("Initial date and time:")
                                 .attr("for", "initDt")
@@ -83,11 +88,15 @@ function createInitForm(svg) {
     buton.append("xhtml:button").attr("type", "submit")
                                 .text("Show chart");
 
-    // Bind Bootstrap datetimepicker to input field
+    function updateNameField(nameField, methodValue) {
+		var a = 2;
+	}
+	
+	// Bind Bootstrap datetimepicker to input field
     $('#dateTimePicker').datetimepicker({format: 'DD.MM.YYYY HH:mm', defaultDate: new Date()});
 
     // Define input width to its default content
-    $.each($('input'), function(){
+    $.each($('input:text'), function(){
         $(this).css('width',(($(this).val().length) * 6.5 + 20 + 'px'));
     });
 
