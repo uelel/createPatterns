@@ -3,7 +3,10 @@ function serverRequest(requestName, messageArray) {
                                    method: 'POST',
                                    body: JSON.stringify(messageArray)})
           .then((response) => response.json())
-          .then((data) => console.log(data));
+          .then(function(data) {
+                    console.log(typeof data, data);
+                    return data;
+                });
 }
 
 // define margin bounds for focus & context regions
@@ -55,7 +58,7 @@ $(document).ready(function() {
 		var promise = serverRequest('loadNewData', message);
         
         // After loadNewData finishes
-        promise.then(function(){
+        serverRequest('loadNewData', message).then(function(){
         // move initial form
         initForm.remove();
         // draw candlestick chart

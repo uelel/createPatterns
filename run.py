@@ -57,7 +57,7 @@ class data():
             # Specify necessary arguments for loadMethod
             cls.keyargs['client'] = DataFrameClient(host='127.0.0.1', port=8086, database=pars['dbName'])
             # specify number of preloaded candles
-            cls.keyargs['noCandles'] = 2000
+            cls.keyargs['noCandles'] = 1000
             
         elif pars['loadMethod'] == 'file':
             # Specify method for actual data loading
@@ -65,7 +65,7 @@ class data():
             # Specify necessary arguments for loadMethod
             cls.keyargs['fileObject'] = open(pars['fileName'], 'r')
             # specify number of preloaded candles
-            cls.keyargs['noCandles'] = 2000
+            cls.keyargs['noCandles'] = 1000
 
         else:
             raise ValueError
@@ -83,13 +83,16 @@ class data():
 
     @classmethod
     def get(cls):
-        """Returns container serialized to JSON array"""
-        return cls.container.to_json(date_format='iso', orient='records')
-        
+        """Returns data container"""
+        return cls.container
 
 def createResponse(status, message):
     """returns flask Response object"""
-    return Response(json.dumps(message), status=status, mimetype='application/json')
+    if type(message) == str:
+        message = json.dumps(message)
+    elif type(message) == pd.DataFrame:
+        message = message.to_json(date_format='iso', orient='records')
+    return Response(message, status=status, mimetype='application/json')
 
 app = Flask(__name__, static_url_path='/static')
 
@@ -111,7 +114,6 @@ def initData():
 def loadNewData():
 
     try:
-        print(request.json)
         data.load(request.json['dtLimit'], request.json['dir'])
         return createResponse(200, "New data successfully loaded!")
     except Exception as error:

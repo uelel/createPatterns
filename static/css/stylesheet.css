@@ -12,6 +12,16 @@ body {
 	transform: translate(27%, 30%);
 }
 
+#initForm {
+    display: grid;
+    grid-gap: 5px;
+}
+
+div.special {
+    display: flex;
+    position: relative;
+}
+
 label {
   	margin-right: 15px;
 	text-align: right;

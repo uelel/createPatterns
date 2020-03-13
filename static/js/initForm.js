@@ -10,34 +10,30 @@ function createInitForm(svg) {
     loadMethodSel.append("xhtml:option").attr("value", "influxdb").text("influxdb");
     loadMethodSel.append("xhtml:option").attr("value", "file").text("file");
 
-    var name = initForm.append("xhtml:div").style("position", "relative")
-										   .style("display", "flex");
-    
+    var name = initForm.append("xhtml:div").attr("class", "special");
+
+    /* 
 	name.append("xhtml:label").text("Choose data file:")
-							  .attr("for", "filePath")
 							  .attr("class", "special");
 	var fileUpload = name.append("xthml:div").attr("class", "fileUpload");
     fileUpload.append("xhtml:input").attr("type", "file")
-							        .attr("name", "filePath")
+							        .attr("name", "fileUploadHidden")
 							        .attr("class", "fileUploadHidden");
     var fileUploadVisible = fileUpload.append("xhtml:div");
     fileUploadVisible.append("xhtml:label").attr("class", "inputIcon")
                      .append("xhtml:span").attr("class", "glyphicon glyphicon-folder-open");
     fileUploadVisible.append("xhtml:input").attr("type", "text")
-                                     .attr("value", "No file chosen...                    ");
-	
-	/* http://jsfiddle.net/spanndemic/5JRMt/
-	name.append("xhtml:label").text("Database name:")
-                                .attr("for", "dbName");
+                                           .attr("name", "fileUploadVisible")
+                                           .attr("value", "No file chosen...   ");
+	*/
+	name.append("xhtml:label").text("Database name:");
     name.append("xhtml:input").attr("type", "text")
                                 .attr("value", "oanda.eurusd.M1")
                                 .attr("name", "dbName");
-	*/
+	
     
-	var initDt = initForm.append("xhtml:div").style("position", "relative")
-                                             .style("display", "flex");
+	var initDt = initForm.append("xhtml:div").attr("class", "special");
     initDt.append("xhtml:label").text("Initial date and time:")
-                                .attr("for", "initDt")
                                 .attr("class", "special");
     var initDtInput = initDt.append("xhtml:div");
     initDtInput.append("xhtml:label").attr("class", "inputIcon")
@@ -48,36 +44,31 @@ function createInitForm(svg) {
                                      .attr("id", "dateTimePicker");
                                      
     var noCandles = initForm.append("xhtml:div");
-    noCandles.append("xhtml:label").text("Number of displayed candles:")
-                                     .attr("for", "noCandles");
+    noCandles.append("xhtml:label").text("Number of displayed candles:");
     noCandles.append("xhtml:input").attr("type", "text")
                                    .attr("value", "160")
                                    .attr("name", "noCandles");
                                      
     var xStep = initForm.append("xhtml:div");
-    xStep.append("xhtml:label").text("Number of minutes between x ticks:")
-                                .attr("for", "xStep");
+    xStep.append("xhtml:label").text("Number of minutes between x ticks:");
     xStep.append("xhtml:input").attr("type", "text")
                                      .attr("value", "15")
                                      .attr("name", "xStep");
 
     var yRange = initForm.append("xhtml:div");
-    yRange.append("xhtml:label").text("y-axis range:")
-                                .attr("for", "yRange");
+    yRange.append("xhtml:label").text("y-axis range:");
     yRange.append("xhtml:input").attr("type", "text")
                                      .attr("value", "0.002")
                                      .attr("name", "yRange");
 
     var yStep = initForm.append("xhtml:div");
-    yStep.append("xhtml:label").text("y-axis step:")
-                                .attr("for", "yStep");
+    yStep.append("xhtml:label").text("y-axis step:");
     yStep.append("xhtml:input").attr("type", "text")
                                      .attr("value", "0.0001")
                                      .attr("name", "yStep");
                                      
     var yPrec = initForm.append("xhtml:div");
-    yPrec.append("xhtml:label").text("y-labels precision:")
-                                .attr("for", "yPrec");
+    yPrec.append("xhtml:label").text("y-labels precision:");
     yPrec.append("xhtml:input").attr("type", "text")
                                      .attr("value", "5")
                                      .attr("name", "yPrec");
@@ -86,6 +77,19 @@ function createInitForm(svg) {
     buton.append("xhtml:button").attr("type", "submit")
                                 .text("Show chart");
 
+    // Change value of visible input to path of selected file
+    $('input[name="fileUploadHidden"]').change(function(){
+        var fileName = $(this).val().replace(/C:\\fakepath\\/i, '');
+        $('input[name="fileUploadVisible"]').val(fileName);
+    });
+    
+    // handle on click event
+    d3.select('#opts')
+      .on('change', function() {
+        var newData = eval(d3.select(this).property('value'));
+        updateLegend(newData);
+    });
+    
     function updateNameField(nameField, methodValue) {
 		var a = 2;
 	}

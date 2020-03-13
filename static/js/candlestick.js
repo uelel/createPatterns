@@ -19,9 +19,8 @@ function drawChart(pars) {
 		// define number of decimal points of y labels
 		var yPrecision = parseFloat(pars['yPrec']);
         
-
         serverRequest('getData', null).then(function(pricesArray) {
-            console.log(typeof pricesArray);
+            
             // Parse dates
             pricesArray = parseDates(pricesArray);
 
@@ -76,6 +75,7 @@ function drawChart(pars) {
             
                 // get translated x scale
                 var xScaleTrans = d3.event.transform.rescaleX(xScale);
+                //console.log(xScaleTrans.invert(w));
 
                 // update x axis
                 gX.call(xAxis.scale(xScaleTrans));
@@ -218,8 +218,8 @@ function timeFormatter(dt) { return moment(dt).tz('UTC').format('HH:mm'); }
 
 // Function that returns formatted date
 function dateFormatter(dt) {
-    var date = dt.getUTCDate();
-    var month = (dt.getUTCMonth() < 10 ? '0' : '') + (dt.getUTCMonth()+1);
+    var date = (dt.getUTCDate() < 10 ? '0' : '') + dt.getUTCDate();
+    var month = ((dt.getUTCMonth()+1) < 10 ? '0' : '') + (dt.getUTCMonth()+1);
     var year = dt.getUTCFullYear();
     return date + '.' + month + '.' + year;
 }
