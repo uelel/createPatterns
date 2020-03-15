@@ -20,14 +20,14 @@ function drawChart(pars) {
 		var yPrecision = parseFloat(pars['yPrec']);
         
         serverRequest('getData', null).then(function(pricesArray) {
-            
+           
             // Parse dates
             pricesArray = parseDates(pricesArray);
 
             // get array of dates from data
-            var dtArray = pricesArray.map(function(d,i){return d.Date;});
+            var dtArray = pricesArray.map(function(d){return d.Date;});
             
-            // calculate most common date
+            // calculate most common date for x axis title
             var averDate = getAverDate(dtArray, dtArray.length - noCandles, dtArray.length);
             
             // define timeScale for relating between dates and their indices
@@ -75,7 +75,8 @@ function drawChart(pars) {
             
                 // get translated x scale
                 var xScaleTrans = d3.event.transform.rescaleX(xScale);
-                //console.log(xScaleTrans.invert(w));
+                //console.log(xScaleTrans.invert(w), dtArray.slice(-1)[0]);
+                if (xScaleTrans.invert(w) > dtArray.slice(-1)[0]) { console.log('Data is missing'); }
 
                 // update x axis
                 gX.call(xAxis.scale(xScaleTrans));
@@ -216,7 +217,7 @@ function getAverDate(datesArray, startInd, endInd) {
 // Function that convert x labels to UTC timezone
 function timeFormatter(dt) { return moment(dt).tz('UTC').format('HH:mm'); }
 
-// Function that returns formatted date
+// Function that returns formatted date for x axis title
 function dateFormatter(dt) {
     var date = (dt.getUTCDate() < 10 ? '0' : '') + dt.getUTCDate();
     var month = ((dt.getUTCMonth()+1) < 10 ? '0' : '') + (dt.getUTCMonth()+1);

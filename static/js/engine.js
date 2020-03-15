@@ -4,7 +4,6 @@ function serverRequest(requestName, messageArray) {
                                    body: JSON.stringify(messageArray)})
           .then((response) => response.json())
           .then(function(data) {
-                    console.log(typeof data, data);
                     return data;
                 });
 }
@@ -46,23 +45,22 @@ $(document).ready(function() {
         console.log(pars);
         
         // Call initData request
-        serverRequest('initData', pars);
-
-        // Create message for loading data
-		var message = {};
-		message['dtLimit'] = pars['initDt'];
-		message['dir'] = 'left';
-        console.log(message);
-		
-        // Call loadNewData request
-		var promise = serverRequest('loadNewData', message);
+        var init = serverRequest('initData', pars);
         
-        // After loadNewData finishes
-        serverRequest('loadNewData', message).then(function(){
-        // move initial form
-        initForm.remove();
-        // draw candlestick chart
-        drawChart(pars);
+        init.then(function() {
+            // Create message for loading data
+            var message = {};
+            message['dtLimit'] = pars['initDt'];
+            message['dir'] = 'left';
+            console.log(message);
+            
+            // Call loadNewData request
+            serverRequest('loadNewData', message).then(function() {
+                // move initial form
+                initForm.remove();
+                // draw candlestick chart
+                drawChart(pars);
+            });
         });
     });
 });
