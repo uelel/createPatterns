@@ -59,7 +59,7 @@ $(document).ready(function() {
                 // move initial form
                 initForm.remove();
                 // draw candlestick chart
-                drawChart(pars);
+                chart = new candleStick(svg, pars, width, height);
             });
         });
     });
