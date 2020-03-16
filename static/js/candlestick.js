@@ -50,28 +50,26 @@ class candleStick {
     // Function that loads prices from getData request and process data
     processData() {
 
-        serverRequest('getData', null).then((data) => {
+        return serverRequest('getData', null).then((data) => {
             
             this.pricesArray = data;
-            console.log(this.pricesArray);
 
             // Parse dates
             this.parseDates();
-
+            
             // get array of dates from data
             this.dtArray = this.pricesArray.map(function(d){return d.Date;});
-            console.log(this.dtArray);
             
             // calculate most common date for x axis title
-            this.getAverDate(this.dtArray.length - this.noCandles, this.dtArray.length);
+            this.getAverDate(this.dtArray.length - this.noCandles, this.dtArray.length)
             
             // define timeScale for relating between dates and their indices
             this.dateIndScale = d3.scaleTime().domain([this.dtArray[0], this.dtArray.slice(-1)[0]]).range([0, this.dtArray.length-1]);
-
+            
             // define linear x-axis scale for positioning of candles
             // inital scale displays noCandles of most recent candles
             this.xScale = d3.scaleTime().domain([this.dateIndScale.invert(this.dtArray.length-this.noCandles), this.dtArray.slice(-1)[0]]).range([0, this.w]);
-
+            
             // define banded x-axis scale to account for padding between candles
             // band scale accounts for padding between candles; range consists of x positions of candles
             this.xBand = d3.scaleBand().domain(d3.range(this.dtArray.length - this.noCandles, this.dtArray.length)).range([0, this.w]).padding(0.3);
@@ -102,15 +100,15 @@ class candleStick {
 
     // define what should be re-rendered during zoom event
     pan() {
-    
+        
         // get translated x scale
         var xScaleTrans = d3.event.transform.rescaleX(this.xScale);
         //console.log(xScaleTrans.invert(w), dtArray.slice(-1)[0]);
-        if (xScaleTrans.invert(this.w) > this.dtArray.slice(-1)[0]) { 
-            console.log('Data is missing'); 
+        //if (xScaleTrans.invert(this.w) > this.dtArray.slice(-1)[0]) { 
+        //    console.log('Data is missing'); 
             // create loadNewData request
             // create getData request and get new prices array
-        };
+        //};
 
         // update x axis
         this.gX.call(this.xAxis.scale(xScaleTrans));
@@ -183,11 +181,11 @@ class candleStick {
         this.zoom = d3.zoom().scaleExtent([1, 1]);
         
         // call method that updates chart during zoom event
-        this.zoom.on('zoom', this.pan);
+        this.zoom.on('zoom', () => { this.pan(); });
 
         // call zoom on entire svg element so that panning is possible from whole svg
         this.svg.call(this.zoom);
-
+        
         // Draw x axis
         this.gX = this.focus.append("g").attr("class", "axis")
                                         .attr("transform", "translate(0," + this.h + ")")
@@ -291,11 +289,8 @@ class candleStick {
 		// define number of decimal points of y labels
 		this.yPrec = parseFloat(pars['yPrec']);
         
-        // load up data
-        this.processData();
-
-        // draw chart
-        this.drawChart();
+        // load up data and then draw chart
+        this.processData().then(() => { this.drawChart(); });
 
     }
 
