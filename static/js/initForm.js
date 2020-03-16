@@ -6,30 +6,17 @@ function createInitForm(svg) {
     var loadMethod = initForm.append("xhtml:div");
     loadMethod.append("xhtml:label").text("Loading method:")
                                     .attr("for", "loadMethod");
-    var loadMethodSel = loadMethod.append("xhtml:select").attr("name", "loadMethod");
+    var loadMethodSel = loadMethod.append("xhtml:select").attr("name", "loadMethod")
+														 .attr("id", "loadMethod");
     loadMethodSel.append("xhtml:option").attr("value", "influxdb").text("influxdb");
     loadMethodSel.append("xhtml:option").attr("value", "file").text("file");
 
-    var name = initForm.append("xhtml:div").attr("class", "special");
-
-    /* 
-	name.append("xhtml:label").text("Choose data file:")
-							  .attr("class", "special");
-	var fileUpload = name.append("xthml:div").attr("class", "fileUpload");
-    fileUpload.append("xhtml:input").attr("type", "file")
-							        .attr("name", "fileUploadHidden")
-							        .attr("class", "fileUploadHidden");
-    var fileUploadVisible = fileUpload.append("xhtml:div");
-    fileUploadVisible.append("xhtml:label").attr("class", "inputIcon")
-                     .append("xhtml:span").attr("class", "glyphicon glyphicon-folder-open");
-    fileUploadVisible.append("xhtml:input").attr("type", "text")
-                                           .attr("name", "fileUploadVisible")
-                                           .attr("value", "No file chosen...   ");
-	*/
-	name.append("xhtml:label").text("Database name:");
-    name.append("xhtml:input").attr("type", "text")
-                                .attr("value", "oanda.eurusd.M1")
-                                .attr("name", "dbName");
+    var loadName = initForm.append("xhtml:div").attr("class", "special")
+											   .attr("id", "loadName");
+	loadName.append("xhtml:label").text("Database name:");
+    loadName.append("xhtml:input").attr("type", "text")
+                                  .attr("value", "oanda.eurusd.M1")
+                                  .attr("name", "dbName");
 	
     
 	var initDt = initForm.append("xhtml:div").attr("class", "special");
@@ -82,17 +69,41 @@ function createInitForm(svg) {
         var fileName = $(this).val().replace(/C:\\fakepath\\/i, '');
         $('input[name="fileUploadVisible"]').val(fileName);
     });
-    
-    // handle on click event
-    d3.select('#opts')
+	
+	// Handle on click event of loadMethod select input
+    d3.select('#loadMethod')
       .on('change', function() {
-        var newData = eval(d3.select(this).property('value'));
-        updateLegend(newData);
+        // load selected option
+		var selectedOption = d3.select(this).property('value');
+        
+		// load up loadName node
+		var loadName = d3.select("#loadName");
+		
+		// delete current content
+		loadName.selectAll("*").remove();
+		
+		// create new content
+		if (selectedOption == "file") {
+			loadName.append("xhtml:label").text("Choose data file:")
+										  .attr("class", "special");
+			var fileUpload = loadName.append("xthml:div").attr("class", "fileUpload");
+			fileUpload.append("xhtml:input").attr("type", "file")
+											.attr("name", "fileUploadHidden")
+											.attr("class", "fileUploadHidden");
+			var fileUploadVisible = fileUpload.append("xhtml:div");
+			fileUploadVisible.append("xhtml:label").attr("class", "inputIcon")
+							 .append("xhtml:span").attr("class", "glyphicon glyphicon-folder-open");
+			fileUploadVisible.append("xhtml:input").attr("type", "text")
+												   .attr("name", "fileUploadVisible")
+												   .attr("value", "No file chosen...   ");
+		}
+		else if (selectedOption == "influxdb") {
+			loadName.append("xhtml:label").text("Database name:");
+			loadName.append("xhtml:input").attr("type", "text")
+										  .attr("value", "oanda.eurusd.M1")
+										  .attr("name", "dbName");
+		}
     });
-    
-    function updateNameField(nameField, methodValue) {
-		var a = 2;
-	}
 	
 	// Bind Bootstrap datetimepicker to input field
     $('#dateTimePicker').datetimepicker({format: 'DD.MM.YYYY HH:mm', defaultDate: new Date()});
