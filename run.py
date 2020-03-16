@@ -2,18 +2,16 @@ from flask import Flask, render_template, Response, request, jsonify
 import json
 from influxdb import DataFrameClient
 import pandas as pd
-
+import datetime
+from pytz import timezone
 
 def loadDataFromInfluxdb(dtLimit, direction, client, noCandles):
     """Actual implementation of data loading from Influxdb"""
     
     if direction == 'left':
         query = 'SELECT "time", "open", "high", "low", "close" FROM "rates" WHERE time < \'%s\' AND ("status" = \'C\' OR "status" = \'A\') ORDER BY DESC LIMIT %i' % (dtLimit, noCandles)
-    
     elif direction == 'right':
         query = 'SELECT "time", "open", "high", "low", "close" FROM "rates" WHERE time > \'%s\' AND ("status" = \'C\' OR "status" = \'A\') ORDER BY ASC LIMIT %i' % (dtLimit, noCandles)
-    
-    else: raise Exception('Direction unknown during loading new data!')
     
     try:
         rates = client.query(query)['rates']
@@ -31,11 +29,43 @@ def loadDataFromInfluxdb(dtLimit, direction, client, noCandles):
     
     return rates
 
-def loadDataFromFile(dtLimit, direction, fileObject, noCandles):
-	"""Actual implementation of data loading from file"""
+def loadDataFromFile(dtLimit, direction, filePath, noCandles):
+    """Actual implementation of data loading from file"""
+    
+    # Adjust dtLimit string to match file format
+    dtLimit = datetime.datetime.strptime(dtLimit, '%Y-%m-%dT%H:%M:%SZ')
+    dtLimit = timezone('UTC').localize(dtLimit)
+    dtLimit = dtLimit.strftime('%Y-%m-%d-%H:%M:%S%z')
 
-	with fileObject as file:
-		print(file.readline())
+    # Find line number in file containing dtLimit
+    dtLimitFound = False
+    with open(filePath, 'r') as file:
+        line = file.readline() 
+        startLine = 0
+        while line:
+            if line.startswith(dtLimit):
+                dtLimitFound = True
+                break
+            line = file.readline()
+            startLine += 1
+    if not dtLimitFound:
+        raise Exception('No such data exist in given file!')
+
+    # Load up data to pandas array
+    if direction == 'left':
+        rates = pd.read_csv(filePath, index_col=False, names=['Date', 'Open', 'High', 'Low', 'Close', 'Spread'], delimiter=' ', skiprows=startLine-noCandles, nrows=noCandles)
+    if direction == 'right':
+        rates = pd.read_csv(filePath, index_col=False, names=['Date', 'Open', 'High', 'Low', 'Close', 'Spread'], delimiter=' ', skiprows=startLine, nrows=noCandles)
+
+    if rates.empty:
+        raise Exception('No such data exist in given file!')
+
+    # Delete last column
+    del rates['Spread']
+    # Parse datetimes in array
+    rates['Date'] = rates['Date'].apply(lambda x: datetime.datetime.strptime(x, '%Y-%m-%d-%H:%M:%S%z'))
+
+    return rates
 
 class data():
     """Class that creates universal data loading method used in requests"""
@@ -65,23 +95,25 @@ class data():
             # Specify method for actual data loading
             cls.loadMethod = loadDataFromFile
             # Specify necessary arguments for loadMethod
-            cls.keyargs['fileObject'] = open('./static/data/'+pars['fileUploadVisible'], 'r')
+            cls.keyargs['filePath'] = './static/data/'+pars['fileUploadVisible']
             # specify number of preloaded candles
             cls.keyargs['noCandles'] = 1000
 
         else:
-            raise ValueError
+            raise Exception('Data loading method unknown during initialization!')
 
     @classmethod
     def load(cls, dtLimit, direction):
         """Call loadMethod
            Load data into container"""
 
+        if direction not in ('left', 'right'):
+            raise Exception('Direction unknown during loading new data!')
+
         rates = cls.loadMethod(dtLimit, direction, **cls.keyargs)
 
         if direction == 'left': cls.container = pd.concat([rates, cls.container])
         elif direction == 'right': cls.container = pd.concat([cls.container, rates])
-        else: raise Exception('Direction unknown during loading new data!')
 
     @classmethod
     def get(cls):
@@ -90,6 +122,7 @@ class data():
 
 def createResponse(status, message):
     """returns flask Response object"""
+    
     if type(message) == str:
         message = json.dumps(message)
     elif type(message) == pd.DataFrame:
