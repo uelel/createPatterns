@@ -63,12 +63,6 @@ function createInitForm(svg) {
     var buton = initForm.append("xhtml:div").attr("id", "initFormButton");
     buton.append("xhtml:button").attr("type", "submit")
                                 .text("Show chart");
-
-    // Change value of visible input to path of selected file
-    $('input[name="fileUploadHidden"]').change(function(){
-        var fileName = $(this).val().replace(/C:\\fakepath\\/i, '');
-        $('input[name="fileUploadVisible"]').val(fileName);
-    });
 	
 	// Handle on click event of loadMethod select input
     d3.select('#loadMethod')
@@ -96,6 +90,12 @@ function createInitForm(svg) {
 			fileUploadVisible.append("xhtml:input").attr("type", "text")
 												   .attr("name", "fileUploadVisible")
 												   .attr("value", "No file chosen...   ");
+			
+			// Change value of visible input to path of selected file
+			$('input[name=fileUploadHidden]').change(function() {
+				var fileName = $(this).val().replace(/C:\\fakepath\\/i, '');
+				$('input[name=fileUploadVisible]').val(fileName);
+    });
 		}
 		else if (selectedOption == "influxdb") {
 			loadName.append("xhtml:label").text("Database name:");

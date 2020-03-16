@@ -32,8 +32,10 @@ def loadDataFromInfluxdb(dtLimit, direction, client, noCandles):
     return rates
 
 def loadDataFromFile(dtLimit, direction, fileObject, noCandles):
-    """Actual implementation of data loading from file"""
-    pass
+	"""Actual implementation of data loading from file"""
+
+	with fileObject as file:
+		print(file.readline())
 
 class data():
     """Class that creates universal data loading method used in requests"""
@@ -63,7 +65,7 @@ class data():
             # Specify method for actual data loading
             cls.loadMethod = loadDataFromFile
             # Specify necessary arguments for loadMethod
-            cls.keyargs['fileObject'] = open(pars['fileName'], 'r')
+            cls.keyargs['fileObject'] = open('./static/data/'+pars['fileUploadVisible'], 'r')
             # specify number of preloaded candles
             cls.keyargs['noCandles'] = 1000
 
