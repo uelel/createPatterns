@@ -2,10 +2,8 @@ function serverRequest(requestName, messageArray) {
     return fetch('/'+requestName, {headers: {'Content-Type': 'application/json'},
                                    method: 'POST',
                                    body: JSON.stringify(messageArray)})
-          .then((response) => response.json())
-          .then(function(data) {
-                    return data;
-                });
+        .then((response) => response.json())
+        .then((data) => { return data } );
 }
 
 // define margin bounds for focus & context regions
