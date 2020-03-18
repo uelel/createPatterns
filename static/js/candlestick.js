@@ -30,13 +30,30 @@ class candleStick {
     createXTicks(startInd, stopInd) {
         // delete previous array content
         this.xTicksArray = [];
+        
+        // find first datetime with full hour
+        var fullHourInd = startInd;
+        for (let i = startInd; i < stopInd-1; i++) {
+            if (this.dtArray[i].minute() === 0) { break; }
+            fullHourInd += 1;
+        }
+
+        // create ticks left from full hour dt
         var noLabelCount = 1;
-        this.xTicksArray.push(this.dtArray[startInd]);
-        for (let i = startInd+1; i < stopInd-2; i++) {
+        for (let i = fullHourInd-1; i >= startInd; i--) {
             if (noLabelCount === this.xStep) { this.xTicksArray.push(this.dtArray[i]); noLabelCount = 1; }
             else { noLabelCount += 1; }
         }
-        this.xTicksArray.push(this.dtArray[stopInd-1]);
+
+        // create ticks right from full hour dt
+        var noLabelCount = this.xStep;
+        for (let i = fullHourInd; i < stopInd-1; i++) {
+            if (noLabelCount === this.xStep) { this.xTicksArray.push(this.dtArray[i]); noLabelCount = 1; }
+            else { noLabelCount += 1; }
+        }
+        
+        // sort resulting array
+        this.xTicksArray.sort((a, b) => a - b);
     }
     
     // Function that returns formatted x values based on provided x ticks
@@ -91,7 +108,6 @@ class candleStick {
             // inital scale displays noCandles of most recent candles
             //this.xScale = d3.scaleTime().domain([this.dateIndScale.invert(this.dtArray.length-this.noCandles), this.dtArray.slice(-1)[0]]).range([0, this.w]);
             this.xScale = d3.scalePoint().domain(this.dtArray.slice(this.dtArray.length-this.noCandles, this.dtArray.length)).range([0, this.w]);
-            console.log(this.xScale(this.dtArray[880]));
 
             // define banded x-axis scale to account for padding between candles
             // band scale accounts for padding between candles; range consists of x positions of candles
@@ -175,7 +191,7 @@ class candleStick {
         // update candle body
         this.candles.data(this.pricesArray.slice(this.dtArray.length-this.noCandles-noTransCandles, this.dtArray.length-noTransCandles))
                     .attr("class", d => (d.Open <= d.Close) ? "candleUp" : "candleDown")
-                    .attr('x', d => xScaleTrans(d.Date) - this.xBand.bandwidth())
+                    .attr('x', d => xScaleTrans(d.Date) - this.xBand.bandwidth()/2)
                     .attr('y', d => yScaleTrans(Math.max(d.Open, d.Close)))
                     .attr('width', this.xBand.bandwidth())
                     .attr('height', d => (d.Open === d.Close) ? 1 : yScaleTrans(Math.min(d.Open, d.Close)) - yScaleTrans(Math.max(d.Open, d.Close)))
@@ -184,8 +200,8 @@ class candleStick {
         // update candle stem
         this.stems.data(this.pricesArray.slice(this.dtArray.length-this.noCandles-noTransCandles, this.dtArray.length-noTransCandles))
                   .attr("class", d => (d.Open <= d.Close) ? "stemUp" : "stemDown")
-                  .attr("x1", d => xScaleTrans(d.Date) - this.xBand.bandwidth() / 2)
-                  .attr("x2", d => xScaleTrans(d.Date) - this.xBand.bandwidth() / 2)
+                  .attr("x1", d => xScaleTrans(d.Date))
+                  .attr("x2", d => xScaleTrans(d.Date))
                   .attr("y1", d => yScaleTrans(d.High))
                   .attr("y2", d => yScaleTrans(d.Low))
                   .attr("clip-path", "url(#clip)");
@@ -250,7 +266,7 @@ class candleStick {
             .append("rect")
             .attr("class", d => (d.Open <= d.Close) ? "candleUp" : "candleDown")
              // xBand.bandwidth() returns width of each candle (each band) 
-            .attr('x', d => this.xScale(d.Date) - this.xBand.bandwidth())
+            .attr('x', d => this.xScale(d.Date) - this.xBand.bandwidth()/2)
             .attr('y', d => this.yScale(Math.max(d.Open, d.Close)))
             .attr('width', this.xBand.bandwidth())
              // yScale returns higher positions for lower prices
@@ -263,8 +279,8 @@ class candleStick {
             .enter()
             .append("line")
             .attr("class", d => (d.Open <= d.Close) ? "stemUp" : "stemDown")
-            .attr("x1", d => this.xScale(d.Date) - this.xBand.bandwidth() / 2)
-            .attr("x2", d => this.xScale(d.Date) - this.xBand.bandwidth() / 2)
+            .attr("x1", d => this.xScale(d.Date))
+            .attr("x2", d => this.xScale(d.Date))
             .attr("y1", d => this.yScale(d.High))
             .attr("y2", d => this.yScale(d.Low))
             .attr("clip-path", "url(#clip)");
