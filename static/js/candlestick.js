@@ -85,6 +85,26 @@ class candleStick {
         return Math.floor((this.noCandles/this.w) * transform.x);
     }
 
+    // Function that renders weekend line when data from two weeks exist
+   drawWeekendLine(startInd, stopInd) {
+
+        // find start-of-week date if exists
+        var weekStartDt = null;
+        for (let i = startInd; i < stopInd-1; i++) {
+            if (this.dtArray[i+1].date() - this.dtArray[i].date() > 1) { weekStartDt = this.dtArray[i+1]; break; }
+        }
+        
+        // draw weekend line if weekStartDt exists, remove it otherwise
+        d3.select("line.weekendLine").remove();
+        if (weekStartDt) {
+            this.chartBody.append("line").attr("class", "weekendLine")
+                                         .attr("x1", this.xScale(weekStartDt) - this.xBand.bandwidth()/1.5)
+                                         .attr("y1", 0)
+                                         .attr("x2", this.xScale(weekStartDt) - this.xBand.bandwidth()/1.5)
+                                         .attr("y2", this.h);
+        }
+    }
+
     // Function that loads prices from getData request and process data
     processData() {
 
@@ -148,7 +168,7 @@ class candleStick {
         // calculate number of candles translated
         var noTransCandles = this.calcNoCandlesTranslated(d3.event.transform);
 
-        var xScaleTrans = d3.scalePoint().domain(this.dtArray.slice(this.dtArray.length-this.noCandles-noTransCandles, this.dtArray.length-noTransCandles)).range([0, this.w]);
+        this.xScale = d3.scalePoint().domain(this.dtArray.slice(this.dtArray.length-this.noCandles-noTransCandles, this.dtArray.length-noTransCandles)).range([0, this.w]);
         //console.log(this.xScaleTrans.domain());
         
         //console.log(xScaleTrans.invert(w), dtArray.slice(-1)[0]);
@@ -162,10 +182,10 @@ class candleStick {
         this.createXTicks(this.dtArray.length-this.noCandles-noTransCandles, this.dtArray.length-noTransCandles);
 
         // update x axis
-        this.gX.call(this.xAxis.scale(xScaleTrans).tickValues(this.xTicksArray));
+        this.gX.call(this.xAxis.scale(this.xScale).tickValues(this.xTicksArray));
 
         // update x grid
-        this.gGX.call(this.xGrid.scale(xScaleTrans).tickValues(this.xTicksArray));
+        this.gGX.call(this.xGrid.scale(this.xScale).tickValues(this.xTicksArray));
         
         // get limits of y axis
         this.getYLimits(this.dtArray.length-this.noCandles-noTransCandles, this.dtArray.length-noTransCandles);
@@ -191,7 +211,7 @@ class candleStick {
         // update candle body
         this.candles.data(this.pricesArray.slice(this.dtArray.length-this.noCandles-noTransCandles, this.dtArray.length-noTransCandles))
                     .attr("class", d => (d.Open <= d.Close) ? "candleUp" : "candleDown")
-                    .attr('x', d => xScaleTrans(d.Date) - this.xBand.bandwidth()/2)
+                    .attr('x', d => this.xScale(d.Date) - this.xBand.bandwidth()/2)
                     .attr('y', d => yScaleTrans(Math.max(d.Open, d.Close)))
                     .attr('width', this.xBand.bandwidth())
                     .attr('height', d => (d.Open === d.Close) ? 1 : yScaleTrans(Math.min(d.Open, d.Close)) - yScaleTrans(Math.max(d.Open, d.Close)))
@@ -200,11 +220,14 @@ class candleStick {
         // update candle stem
         this.stems.data(this.pricesArray.slice(this.dtArray.length-this.noCandles-noTransCandles, this.dtArray.length-noTransCandles))
                   .attr("class", d => (d.Open <= d.Close) ? "stemUp" : "stemDown")
-                  .attr("x1", d => xScaleTrans(d.Date))
-                  .attr("x2", d => xScaleTrans(d.Date))
+                  .attr("x1", d => this.xScale(d.Date))
+                  .attr("x2", d => this.xScale(d.Date))
                   .attr("y1", d => yScaleTrans(d.High))
                   .attr("y2", d => yScaleTrans(d.Low))
                   .attr("clip-path", "url(#clip)");
+
+        // draw weekend line if necessary
+        this.drawWeekendLine(this.dtArray.length-this.noCandles-noTransCandles, this.dtArray.length-noTransCandles);
     }
 
     drawChart() {
@@ -284,6 +307,9 @@ class candleStick {
             .attr("y1", d => this.yScale(d.High))
             .attr("y2", d => this.yScale(d.Low))
             .attr("clip-path", "url(#clip)");
+        
+        // draw weekend line if necessary
+        this.drawWeekendLine(this.dtArray.length-this.noCandles, this.dtArray.length);
 
     }
 
@@ -315,7 +341,8 @@ class candleStick {
         this.gGX,
         this.gGY,
         this.candles,
-        this.stems;
+        this.stems,
+        this.weekendLine;
 
         // create svg backbone
         this.svg = svg;
