@@ -28,6 +28,8 @@ class candleStick {
 
     // Function that creates array of x axis ticks
     createXTicks(startInd, stopInd) {
+        // delete previous array content
+        this.xTicksArray = [];
         var noLabelCount = 1;
         this.xTicksArray.push(this.dtArray[startInd]);
         for (let i = startInd+1; i < stopInd-2; i++) {
@@ -128,9 +130,9 @@ class candleStick {
     pan() {
         
         // calculate number of candles translated
-        var noCandlesTranslated = this.calcNoCandlesTranslated(d3.event.transform);
+        var noTransCandles = this.calcNoCandlesTranslated(d3.event.transform);
 
-        var xScaleTrans = d3.scalePoint().domain(this.dtArray.slice(this.dtArray.length-this.noCandles-noCandlesTranslated, this.dtArray.length-noCandlesTranslated)).range([0, this.w]);
+        var xScaleTrans = d3.scalePoint().domain(this.dtArray.slice(this.dtArray.length-this.noCandles-noTransCandles, this.dtArray.length-noTransCandles)).range([0, this.w]);
         //console.log(this.xScaleTrans.domain());
         
         //console.log(xScaleTrans.invert(w), dtArray.slice(-1)[0]);
@@ -141,7 +143,7 @@ class candleStick {
         //};
 
         // create new x ticks
-        this.createXTicks(this.dtArray.length-this.noCandles-noCandlesTranslated, this.dtArray.length-noCandlesTranslated);
+        this.createXTicks(this.dtArray.length-this.noCandles-noTransCandles, this.dtArray.length-noTransCandles);
 
         // update x axis
         this.gX.call(this.xAxis.scale(xScaleTrans).tickValues(this.xTicksArray));
@@ -150,7 +152,7 @@ class candleStick {
         this.gGX.call(this.xGrid.scale(xScaleTrans).tickValues(this.xTicksArray));
         
         // get limits of y axis
-        this.getYLimits(this.dtArray.length-this.noCandles-noCandlesTranslated, this.dtArray.length-noCandlesTranslated);
+        this.getYLimits(this.dtArray.length-this.noCandles-noTransCandles, this.dtArray.length-noTransCandles);
 
         // get value of y ticks
         this.createYTicks();
@@ -165,23 +167,25 @@ class candleStick {
         this.gGY.call(this.yGrid.scale(yScaleTrans).tickValues(this.yTicksArray));
         
         // calculate most common date
-        this.getAverDate(Math.floor(this.dateIndScale(xScaleTrans.domain()[0])), Math.floor(this.dateIndScale(xScaleTrans.domain()[1])));
+        this.getAverDate(this.dtArray.length-this.noCandles-noTransCandles, this.dtArray.length-noTransCandles);
 
         // update x title
         this.xTitle.text(this.dateFormatter(this.averDate));
 
         // update candle body
-        this.candles.attr("class", d => (d.Open <= d.Close) ? "candleUp" : "candleDown")
-                    .attr('x', d => { if (typeof xScaleTrans(d.Date) === "number") { return xScaleTrans(d.Date) - this.xBand.bandwidth() } else { return -10 } })
+        this.candles.data(this.pricesArray.slice(this.dtArray.length-this.noCandles-noTransCandles, this.dtArray.length-noTransCandles))
+                    .attr("class", d => (d.Open <= d.Close) ? "candleUp" : "candleDown")
+                    .attr('x', d => xScaleTrans(d.Date) - this.xBand.bandwidth())
                     .attr('y', d => yScaleTrans(Math.max(d.Open, d.Close)))
                     .attr('width', this.xBand.bandwidth())
                     .attr('height', d => (d.Open === d.Close) ? 1 : yScaleTrans(Math.min(d.Open, d.Close)) - yScaleTrans(Math.max(d.Open, d.Close)))
                     .attr("clip-path", "url(#clip)");
 
         // update candle stem
-        this.stems.attr("class", d => (d.Open <= d.Close) ? "stemUp" : "stemDown")
-                  .attr("x1", d => { if (typeof xScaleTrans(d.Date) === "number") { return xScaleTrans(d.Date) - this.xBand.bandwidth() / 2 } else { return -10 } })
-                  .attr("x2", d => { if (typeof xScaleTrans(d.Date) === "number") { return xScaleTrans(d.Date) - this.xBand.bandwidth() / 2 } else { return -10 } })
+        this.stems.data(this.pricesArray.slice(this.dtArray.length-this.noCandles-noTransCandles, this.dtArray.length-noTransCandles))
+                  .attr("class", d => (d.Open <= d.Close) ? "stemUp" : "stemDown")
+                  .attr("x1", d => xScaleTrans(d.Date) - this.xBand.bandwidth() / 2)
+                  .attr("x2", d => xScaleTrans(d.Date) - this.xBand.bandwidth() / 2)
                   .attr("y1", d => yScaleTrans(d.High))
                   .attr("y2", d => yScaleTrans(d.Low))
                   .attr("clip-path", "url(#clip)");
@@ -241,12 +245,12 @@ class candleStick {
         // draw candles in chart body
         // candles are rect elements
         this.candles = this.chartBody.selectAll(".candle")
-            .data(this.pricesArray)
+            .data(this.pricesArray.slice(this.dtArray.length-this.noCandles, this.dtArray.length))
             .enter()
             .append("rect")
             .attr("class", d => (d.Open <= d.Close) ? "candleUp" : "candleDown")
              // xBand.bandwidth() returns width of each candle (each band) 
-            .attr('x', d => { if (typeof this.xScale(d.Date) === "number") { return this.xScale(d.Date) - this.xBand.bandwidth() } else { return -10 } })
+            .attr('x', d => this.xScale(d.Date) - this.xBand.bandwidth())
             .attr('y', d => this.yScale(Math.max(d.Open, d.Close)))
             .attr('width', this.xBand.bandwidth())
              // yScale returns higher positions for lower prices
@@ -255,12 +259,12 @@ class candleStick {
 
         // draw high-low lines in chart body
         this.stems = this.chartBody.selectAll("g.line")
-            .data(this.pricesArray)
+            .data(this.pricesArray.slice(this.dtArray.length-this.noCandles, this.dtArray.length))
             .enter()
             .append("line")
             .attr("class", d => (d.Open <= d.Close) ? "stemUp" : "stemDown")
-            .attr("x1", d => { if (typeof this.xScale(d.Date) === "number") { return this.xScale(d.Date) - this.xBand.bandwidth() / 2 } else { return -10 } })
-            .attr("x2", d => { if (typeof this.xScale(d.Date) === "number") { return this.xScale(d.Date) - this.xBand.bandwidth() / 2 } else { return -10 } })
+            .attr("x1", d => this.xScale(d.Date) - this.xBand.bandwidth() / 2)
+            .attr("x2", d => this.xScale(d.Date) - this.xBand.bandwidth() / 2)
             .attr("y1", d => this.yScale(d.High))
             .attr("y2", d => this.yScale(d.Low))
             .attr("clip-path", "url(#clip)");
@@ -304,7 +308,7 @@ class candleStick {
         this.height = height;
 
         // define margins
-        this.margin = { top: 15, right: 15, bottom: 80, left: 80 },
+        this.margin = { top: 15, right: 30, bottom: 80, left: 80 },
 	    this.w = this.width - this.margin.left - this.margin.right,
 		this.h = this.height - this.margin.top - this.margin.bottom;
 		
