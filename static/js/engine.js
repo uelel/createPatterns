@@ -1,3 +1,13 @@
+function createMessageForDataLoad(dtLimit, dir) {
+    var message = {};
+    if (typeof dtLimit === "string") { 
+        let dt = moment.utc(dtLimit, 'DD.MM.YYYY HH:mm');
+        message['dtLimit'] = dt.format('YYYY-MM-DD[T]HH:mm:SS[Z]');
+    } else if (moment.isMoment(dtLimit)) { message['dtLimit'] = dtLimit.format('YYYY-MM-DD[T]HH:mm:SS[Z]'); }
+    message['dir'] = dir;
+    return message;
+}
+
 function serverRequest(requestName, messageArray) {
     return fetch('/'+requestName, {headers: {'Content-Type': 'application/json'},
                                    method: 'POST',
@@ -31,30 +41,18 @@ $(document).ready(function() {
         
         // Serialize form values
 		var pars = {};
-        $.each($(this).serializeArray(), function(i, field) {
-            if (field.name == "initDt") {
-                let dt = moment.utc(field.value, 'DD.MM.YYYY HH:mm');
-                pars[field.name] = dt.format('YYYY-MM-DDTHH:mm:SS[Z]');
-            } 
-			else { 
-				pars[field.name] = field.value; 
-			}
-        });
+        $.each($(this).serializeArray(), function(i, field) { pars[field.name] = field.value; });
         console.log(pars);
         
         // Call initData request
-        var init = serverRequest('initData', pars);
-        
-        init.then(function() {
+        serverRequest('initData', pars).then(() => {
             // Create message for loading data
-            var message = {};
-            message['dtLimit'] = pars['initDt'];
-            message['dir'] = 'left';
+            var message = createMessageForDataLoad(pars['initDt'], 'left');
             console.log(message);
             
             // Call loadNewData request
-            serverRequest('loadNewData', message).then(function() {
-                // move initial form
+            serverRequest('loadNewData', message).then(() => {
+                // remove initial form
                 initForm.remove();
                 // draw candlestick chart
                 chart = new candleStick(svg, pars, width, height);
