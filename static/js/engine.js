@@ -42,20 +42,18 @@ $(document).ready(function() {
         // Serialize form values
 		var pars = {};
         $.each($(this).serializeArray(), function(i, field) { pars[field.name] = field.value; });
-        console.log(pars);
         
         // Call initData request
         serverRequest('initData', pars).then(() => {
             // Create message for loading data
             var message = createMessageForDataLoad(pars['initDt'], 'left');
-            console.log(message);
             
             // Call loadNewData request
-            serverRequest('loadNewData', message).then(() => {
+            serverRequest('loadNewData', message).then((data) => {
                 // remove initial form
                 initForm.remove();
                 // draw candlestick chart
-                chart = new candleStick(svg, pars, width, height);
+                chart = new candleStick(svg, pars, width, height, data);
             });
         });
     });

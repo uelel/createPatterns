@@ -8,6 +8,11 @@ class candleStick {
         for (let i = 0; i <= data.length-1; i++) { data[i].Date = moment.utc(data[i].Date, 'YYYY-MM-DD[T]HH:mm:ss.SSS[Z]'); }
         return data;
     }
+    
+    // Function that creates dt array from data
+    createDtArray() {
+        this.dtArray = this.pricesArray.map(function(d){return d.Date;});
+    }
 
     // Function that returns middle date object from array of dates
     getAverDate(startInd, endInd) {
@@ -31,6 +36,8 @@ class candleStick {
         // find first datetime with full hour
         var fullHourInd = startInd;
         for (let i = startInd; i < stopInd-1; i++) {
+            //console.log(i);
+            //console.log(this.dtArray[i]);
             if (this.dtArray[i].minute() === 0) { break; }
             fullHourInd += 1;
         }
@@ -79,7 +86,7 @@ class candleStick {
     // Positive value means right shift
     // Negative value means left shift
     calcNoCandlesTranslated(transform) {
-        return Math.floor((this.noCandles/this.w) * transform.x);
+        this.noTransCandles = Math.floor((this.noCandles/this.w) * transform.x) + this.newRightData;
     }
 
     // Function that renders weekend line when data from two weeks exist
@@ -105,44 +112,45 @@ class candleStick {
     // Function that checks whether it is necessary to load new data
     // Loads news data if necessary
     // Returns correct noCandlesTrans
-    checkAvailData(noTransCandles) {
+    checkAvailData() {
         
         return new Promise((resolve, reject) => {
-        // check if it is necessary to load new data
-        if (this.pricesArray.length-this.noCandles-noTransCandles < 0) {
-            var dir = 'left';
-            var message = createMessageForDataLoad(this.dtArray[0], dir);
-            console.log('reached left limit of array');
-        } else if (this.pricesArray.length-noTransCandles > this.pricesArray.length-1) {
-            var dir = 'right';
-            var message = createMessageForDataLoad(this.dtArray.slice(-1)[0], dir);
-            console.log('reached right limit of array');
-        } else { console.log('translation within array limits'); return resolve(noTransCandles); }
-        console.log('continuing to serverRequest'); 
-        // load new data if necessary
-        serverRequest('loadNewData', message).then(() => {
-                    serverRequest('getData', null).then((data) => {  
-                        console.log(data);
-                        if (dir === 'left') { 
-                            noTransCandles += data.length;
-                            data = this.parseDates(data);
-                            this.pricesArray = data.concat(this.pricesArray);
-                            this.dtArray = this.pricesArray.map(function(d){return d.Date;});
-                        } else if (dir === 'right') {
-                            data = this.parseDates(data);
-                            this.pricesArray = this.pricesArray.concat(data);
-                            this.dtArray = this.pricesArray.map(function(d){return d.Date;});
-                        }
-                        return resolve(noTransCandles);
-                    });
-                });
+            // check if it is necessary to load new data
+            if (this.pricesArray.length-this.noCandles-this.noTransCandles < 0) {
+                var dir = 'left';
+                var message = createMessageForDataLoad(this.dtArray[0], dir);
+                console.log('reached left limit of array');
+            } else if (this.pricesArray.length-this.noTransCandles > this.pricesArray.length-1) {
+                var dir = 'right';
+                var message = createMessageForDataLoad(this.dtArray.slice(-1)[0], dir);
+                console.log('reached right limit of array');
+            } else { return resolve(); }
+            console.log('continuing to serverRequest'); 
+            // load new data if necessary
+            this.isLoadingData = true;
+            serverRequest('loadNewData', message).then((data) => {
+                if (dir === 'left') { 
+                    data = this.parseDates(data);
+                    this.pricesArray = data.concat(this.pricesArray);
+                    this.createDtArray();
+                } else if (dir === 'right') {
+                    this.noTransCandles += data.length;
+                    this.newRightData += data.length;
+                    data = this.parseDates(data);
+                    this.pricesArray = this.pricesArray.concat(data);
+                    this.createDtArray();
+                }
+                console.log('pricesArray', this.pricesArray);
+                console.log('dtArray', this.dtArray);
+                return resolve();
+            });
         });
     }
 
     // Function that loads prices from getData request and process data
-    processData() {
+    processData(data) {
 
-        return serverRequest('getData', null).then((data) => {
+        return new Promise((resolve, reject) => {
             
             // Parse dates to moment objects
             data = this.parseDates(data);
@@ -150,7 +158,7 @@ class candleStick {
             this.pricesArray = data;
             
             // get array of dates from data
-            this.dtArray = this.pricesArray.map(function(d){return d.Date;});
+            this.createDtArray();
 
             // calculate most common date for x axis title
             this.getAverDate(this.dtArray.length - this.noCandles, this.dtArray.length);
@@ -187,25 +195,28 @@ class candleStick {
             
             // Define y gridlines
             this.yGrid = d3.axisLeft().scale(this.yScale).tickValues(this.yTicksArray).tickFormat("").tickSize(-this.w);
-        
+       
+            return resolve();
         });
     }
 
     // define what should be re-rendered during zoom event
     pan() {
         
-        // calculate number of candles translated
-        var noTransCandles = this.calcNoCandlesTranslated(d3.event.transform);
+        if (this.isLoadingData) { return; }
 
+        // calculate number of candles translated from transform event
+        this.calcNoCandlesTranslated(d3.event.transform);
+        
         // check if data is available for given translation
-        this.checkAvailData(noTransCandles).then((noTransCandles) => {
-            console.log(noTransCandles);
+        this.checkAvailData().then(() => {
+            
             // update x scale
-            this.xScale = d3.scalePoint().domain(this.dtArray.slice(this.dtArray.length-this.noCandles-noTransCandles, this.dtArray.length-noTransCandles)).range([0, this.w]);
-
+            this.xScale = d3.scalePoint().domain(this.dtArray.slice(this.dtArray.length-this.noCandles-this.noTransCandles, this.dtArray.length-this.noTransCandles)).range([0, this.w]);
+            
             // create new x ticks
-            this.createXTicks(this.dtArray.length-this.noCandles-noTransCandles, this.dtArray.length-noTransCandles);
-
+            this.createXTicks(this.dtArray.length-this.noCandles-this.noTransCandles, this.dtArray.length-this.noTransCandles);
+            
             // update x axis
             this.gX.call(this.xAxis.scale(this.xScale).tickValues(this.xTicksArray));
 
@@ -213,7 +224,7 @@ class candleStick {
             this.gGX.call(this.xGrid.scale(this.xScale).tickValues(this.xTicksArray));
             
             // get limits of y axis
-            this.getYLimits(this.dtArray.length-this.noCandles-noTransCandles, this.dtArray.length-noTransCandles);
+            this.getYLimits(this.dtArray.length-this.noCandles-this.noTransCandles, this.dtArray.length-this.noTransCandles);
 
             // get value of y ticks
             this.createYTicks();
@@ -228,13 +239,13 @@ class candleStick {
             this.gGY.call(this.yGrid.scale(this.yScale).tickValues(this.yTicksArray));
             
             // calculate most common date
-            this.getAverDate(this.dtArray.length-this.noCandles-noTransCandles, this.dtArray.length-noTransCandles);
+            this.getAverDate(this.dtArray.length-this.noCandles-this.noTransCandles, this.dtArray.length-this.noTransCandles);
 
             // update x title
             this.xTitle.text(this.dateFormatter(this.averDate));
 
             // update candle body
-            this.candles.data(this.pricesArray.slice(this.dtArray.length-this.noCandles-noTransCandles, this.dtArray.length-noTransCandles))
+            this.candles.data(this.pricesArray.slice(this.dtArray.length-this.noCandles-this.noTransCandles, this.dtArray.length-this.noTransCandles))
                         .attr("class", d => (d.Open <= d.Close) ? "candleUp" : "candleDown")
                         .attr('x', d => this.xScale(d.Date) - this.xBand.bandwidth()/2)
                         .attr('y', d => this.yScale(Math.max(d.Open, d.Close)))
@@ -243,7 +254,7 @@ class candleStick {
                         .attr("clip-path", "url(#clip)");
 
             // update candle stem
-            this.stems.data(this.pricesArray.slice(this.dtArray.length-this.noCandles-noTransCandles, this.dtArray.length-noTransCandles))
+            this.stems.data(this.pricesArray.slice(this.dtArray.length-this.noCandles-this.noTransCandles, this.dtArray.length-this.noTransCandles))
                       .attr("class", d => (d.Open <= d.Close) ? "stemUp" : "stemDown")
                       .attr("x1", d => this.xScale(d.Date))
                       .attr("x2", d => this.xScale(d.Date))
@@ -252,7 +263,9 @@ class candleStick {
                       .attr("clip-path", "url(#clip)");
 
             // draw weekend line if necessary
-            this.drawWeekendLine(this.dtArray.length-this.noCandles-noTransCandles, this.dtArray.length-noTransCandles);
+            this.drawWeekendLine(this.dtArray.length-this.noCandles-this.noTransCandles, this.dtArray.length-this.noTransCandles);
+
+            this.isLoadingData = false;
         });
     }
 
@@ -283,9 +296,7 @@ class candleStick {
         this.zoom = d3.zoom().scaleExtent([1, 1]);
         
         // call method that updates chart during zoom event
-        //.on('start', xxx) // on mousedown
         this.zoom.on('zoom', () => { this.pan(); }); // on mousemove
-        //.on('end', zoomEndFunction) // on mouseup
         
         // call zoom on entire svg element so that panning is possible from whole svg
         this.svg.call(this.zoom);
@@ -341,10 +352,13 @@ class candleStick {
 
     }
 
-    constructor(svg, pars) {
+    constructor(svg, pars, width, height, data) {
         
         // declare variables for data processing
-        this.pricesArray = [];
+        this.isLoadingData = false,
+        this.newRightData = 0,
+        this.noTransCandles = 0,
+        this.pricesArray = [],
         this.dtArray,
         this.averDate,
         this.xScale,
@@ -398,7 +412,7 @@ class candleStick {
 		this.yPrec = parseFloat(pars['yPrec']);
         
         // load up data and then draw chart
-        this.processData().then(() => { this.drawChart(); });
+        this.processData(data).then(() => { this.drawChart(); });
 
     }
 

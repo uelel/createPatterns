@@ -37,7 +37,7 @@ def loadDataFromFile(dtLimit, direction, filePath, noCandles):
     dtLimit = timezone('UTC').localize(dtLimit)
     dtLimit = dtLimit.strftime('%Y-%m-%d-%H:%M:%S%z')
 
-    # Find line number in file containing dtLimit
+    # Find line number containing dtLimit
     dtLimitFound = False
     with open(filePath, 'r') as file:
         line = file.readline() 
@@ -72,7 +72,7 @@ class data():
 
     loadMethod = None
     keyargs = dict()
-    container = pd.DataFrame(columns=['Date', 'Open', 'High', 'Low', 'Close'])
+    #container = pd.DataFrame(columns=['Date', 'Open', 'High', 'Low', 'Close'])
 
     @classmethod
     def init(cls, pars):
@@ -81,7 +81,7 @@ class data():
         # Reset arguments
         cls.loadMethod = None
         cls.keyargs = dict()
-        cls.container = pd.DataFrame(columns=['Date', 'Open', 'High', 'Low', 'Close'])
+        #cls.container = pd.DataFrame(columns=['Date', 'Open', 'High', 'Low', 'Close'])
 
         if pars['loadMethod'] == 'influxdb':
             # Specify method for actual data loading
@@ -105,20 +105,12 @@ class data():
     @classmethod
     def load(cls, dtLimit, direction):
         """Call loadMethod
-           Load data into container"""
+           Returns loaded data"""
 
         if direction not in ('left', 'right'):
             raise Exception('Direction unknown during loading new data!')
 
-        rates = cls.loadMethod(dtLimit, direction, **cls.keyargs)
-
-        if direction == 'left': cls.container = pd.concat([rates, cls.container])
-        elif direction == 'right': cls.container = pd.concat([cls.container, rates])
-
-    @classmethod
-    def get(cls):
-        """Returns data container"""
-        return cls.container
+        return cls.loadMethod(dtLimit, direction, **cls.keyargs)
 
 def createResponse(status, message):
     """returns flask Response object"""
@@ -149,40 +141,10 @@ def initData():
 def loadNewData():
 
     try:
-        data.load(request.json['dtLimit'], request.json['dir'])
-        return createResponse(200, "New data successfully loaded!")
+        return createResponse(200, data.load(request.json['dtLimit'], request.json['dir']))
     except Exception as error:
         print(error)
         return createResponse(400, "Error during loading new data!")
-
-@app.route("/getData", methods=['POST'])
-def getData():
-    
-    return createResponse(200, data.get())
-
-@app.route("/barChart")
-def barChart():
-    return render_template("barChart.html")
-
-@app.route("/barChart2")
-def barChart2():
-    return render_template("barChart2.html")
-
-@app.route("/CChart")
-def CChart():
-    return render_template("candlestickChart.html")
-
-@app.route("/animation")
-def animation():
-    return render_template("animation.html")
-
-@app.route("/intBarChart")
-def intBarChart():
-    return render_template("intBarChart.html")
-
-@app.route("/panningChart")
-def panningChart():
-    return render_template("panningChart.html")
 
 if __name__ == "__main__":
     app.run(debug=True)
