@@ -1,6 +1,7 @@
 from flask import Flask, render_template, Response, request, jsonify
 import json
 from influxdb import DataFrameClient
+import numpy as np
 import pandas as pd
 import datetime
 from pytz import timezone
@@ -9,9 +10,9 @@ def loadDataFromInfluxdb(dtLimit, direction, client, noCandles):
     """Actual implementation of data loading from Influxdb"""
     
     if direction == 'left':
-        query = 'SELECT "time", "open", "high", "low", "close" FROM "rates" WHERE time < \'%s\' AND ("status" = \'C\' OR "status" = \'A\') ORDER BY DESC LIMIT %i' % (dtLimit, noCandles)
+        query = 'SELECT "time", "open", "high", "low", "close" FROM "rates" WHERE time < \'%s\' ORDER BY DESC LIMIT %i' % (dtLimit, noCandles)
     elif direction == 'right':
-        query = 'SELECT "time", "open", "high", "low", "close" FROM "rates" WHERE time > \'%s\' AND ("status" = \'C\' OR "status" = \'A\') ORDER BY ASC LIMIT %i' % (dtLimit, noCandles)
+        query = 'SELECT "time", "open", "high", "low", "close" FROM "rates" WHERE time > \'%s\' ORDER BY ASC LIMIT %i' % (dtLimit, noCandles)
     
     try:
         rates = client.query(query)['rates']
@@ -26,6 +27,8 @@ def loadDataFromInfluxdb(dtLimit, direction, client, noCandles):
     rates = rates.loc[:, ['Date', 'open', 'high', 'low', 'close']]
     # Rename other columns
     rates.columns = ['Date', 'Open', 'High', 'Low', 'Close']
+    # Replace null values for np.nan
+    rates.replace(0.0, np.nan, inplace=True)
     
     return rates
 

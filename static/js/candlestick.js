@@ -11,7 +11,7 @@ class candleStick {
     
     // Function that creates dt array from data
     createDtArray() {
-        this.dtArray = this.pricesArray.map(function(d){return d.Date;});
+        this.dtArray = this.priceArray.map(function(d){return d.Date;});
     }
 
     // Function that returns middle date object from array of dates
@@ -67,7 +67,7 @@ class candleStick {
     getYLimits(dtArrayStart, dtArrayEnd) {
         var ohlcArray = [];
         for(let i = dtArrayStart; i < dtArrayEnd; i++){
-            ohlcArray.push(parseFloat(this.pricesArray[i].Open), parseFloat(this.pricesArray[i].High), parseFloat(this.pricesArray[i].Low), parseFloat(this.pricesArray[i].Close));
+            ohlcArray.push(parseFloat(this.priceArray[i].Open), parseFloat(this.priceArray[i].High), parseFloat(this.priceArray[i].Low), parseFloat(this.priceArray[i].Close));
         }
         var middlePrice = (d3.max(ohlcArray) - d3.min(ohlcArray))/2 + d3.min(ohlcArray);
         this.yLimitArray = [this.roundFloat(middlePrice - this.yRange/2), this.roundFloat(middlePrice + this.yRange/2)];
@@ -80,6 +80,12 @@ class candleStick {
             labelsArray.push(this.roundFloat(i));
         }
         this.yTicksArray = labelsArray;
+    }
+
+    // Function that returns slice of price array with removed missing candles
+    filterPriceArray(startInd, stopInd) {
+        var array = this.priceArray.slice(startInd, stopInd);
+        return array.filter((row) => { return row.Open != null;});
     }
 
     // Function that calculates how many candles are translated from d3.event.transform object
@@ -102,9 +108,9 @@ class candleStick {
         d3.select("line.weekendLine").remove();
         if (weekStartDt) {
             this.chartBody.append("line").attr("class", "weekendLine")
-                                         .attr("x1", this.xScale(weekStartDt) - this.xBand.bandwidth()/1.5)
+                                         .attr("x1", this.xScale(weekStartDt) - this.xBand.bandwidth()/2)
                                          .attr("y1", 0)
-                                         .attr("x2", this.xScale(weekStartDt) - this.xBand.bandwidth()/1.5)
+                                         .attr("x2", this.xScale(weekStartDt) - this.xBand.bandwidth()/2)
                                          .attr("y2", this.h);
         }
     }
@@ -116,11 +122,11 @@ class candleStick {
         
         return new Promise((resolve, reject) => {
             // check if it is necessary to load new data
-            if (this.pricesArray.length-this.noCandles-this.noTransCandles < 0) {
+            if (this.priceArray.length-this.noCandles-this.noTransCandles < 0) {
                 var dir = 'left';
                 var message = createMessageForDataLoad(this.dtArray[0], dir);
                 console.log('reached left limit of array');
-            } else if (this.pricesArray.length-this.noTransCandles > this.pricesArray.length-1) {
+            } else if (this.priceArray.length-this.noTransCandles > this.priceArray.length-1) {
                 var dir = 'right';
                 var message = createMessageForDataLoad(this.dtArray.slice(-1)[0], dir);
                 console.log('reached right limit of array');
@@ -131,16 +137,16 @@ class candleStick {
             serverRequest('loadNewData', message).then((data) => {
                 if (dir === 'left') { 
                     data = this.parseDates(data);
-                    this.pricesArray = data.concat(this.pricesArray);
+                    this.priceArray = data.concat(this.priceArray);
                     this.createDtArray();
                 } else if (dir === 'right') {
                     this.noTransCandles += data.length;
                     this.newRightData += data.length;
                     data = this.parseDates(data);
-                    this.pricesArray = this.pricesArray.concat(data);
+                    this.priceArray = this.priceArray.concat(data);
                     this.createDtArray();
                 }
-                console.log('pricesArray', this.pricesArray);
+                console.log('priceArray', this.priceArray);
                 console.log('dtArray', this.dtArray);
                 return resolve();
             });
@@ -155,7 +161,7 @@ class candleStick {
             // Parse dates to moment objects
             data = this.parseDates(data);
             
-            this.pricesArray = data;
+            this.priceArray = data;
             
             // get array of dates from data
             this.createDtArray();
@@ -245,7 +251,7 @@ class candleStick {
             this.xTitle.text(this.dateFormatter(this.averDate));
 
             // update candle body
-            this.candles.data(this.pricesArray.slice(this.dtArray.length-this.noCandles-this.noTransCandles, this.dtArray.length-this.noTransCandles))
+            this.candles.data(this.filterPriceArray(this.dtArray.length-this.noCandles-this.noTransCandles, this.dtArray.length-this.noTransCandles))
                         .attr("class", d => (d.Open <= d.Close) ? "candleUp" : "candleDown")
                         .attr('x', d => this.xScale(d.Date) - this.xBand.bandwidth()/2)
                         .attr('y', d => this.yScale(Math.max(d.Open, d.Close)))
@@ -254,7 +260,7 @@ class candleStick {
                         .attr("clip-path", "url(#clip)");
 
             // update candle stem
-            this.stems.data(this.pricesArray.slice(this.dtArray.length-this.noCandles-this.noTransCandles, this.dtArray.length-this.noTransCandles))
+            this.stems.data(this.filterPriceArray(this.dtArray.length-this.noCandles-this.noTransCandles, this.dtArray.length-this.noTransCandles))
                       .attr("class", d => (d.Open <= d.Close) ? "stemUp" : "stemDown")
                       .attr("x1", d => this.xScale(d.Date))
                       .attr("x2", d => this.xScale(d.Date))
@@ -323,7 +329,7 @@ class candleStick {
         // draw candles in chart body
         // candles are rect elements
         this.candles = this.chartBody.selectAll(".candle")
-            .data(this.pricesArray.slice(this.dtArray.length-this.noCandles, this.dtArray.length))
+            .data(this.filterPriceArray(this.dtArray.length-this.noCandles, this.dtArray.length))
             .enter()
             .append("rect")
             .attr("class", d => (d.Open <= d.Close) ? "candleUp" : "candleDown")
@@ -337,7 +343,7 @@ class candleStick {
 
         // draw high-low lines in chart body
         this.stems = this.chartBody.selectAll("g.line")
-            .data(this.pricesArray.slice(this.dtArray.length-this.noCandles, this.dtArray.length))
+            .data(this.filterPriceArray(this.dtArray.length-this.noCandles, this.dtArray.length))
             .enter()
             .append("line")
             .attr("class", d => (d.Open <= d.Close) ? "stemUp" : "stemDown")
@@ -358,7 +364,7 @@ class candleStick {
         this.isLoadingData = false,
         this.newRightData = 0,
         this.noTransCandles = 0,
-        this.pricesArray = [],
+        this.priceArray = [],
         this.dtArray,
         this.averDate,
         this.xScale,
