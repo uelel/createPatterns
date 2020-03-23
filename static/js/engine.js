@@ -1,7 +1,8 @@
 function createMessageForDataLoad(dtLimit, dir) {
     var message = {};
-    if (typeof dtLimit === "string") { 
+    if (typeof dtLimit === "string") {
         let dt = moment.utc(dtLimit, 'DD.MM.YYYY HH:mm');
+        if (dir === 'left') { dt.add(1, 'minutes'); }
         message['dtLimit'] = dt.format('YYYY-MM-DD[T]HH:mm:SS[Z]');
     } else if (moment.isMoment(dtLimit)) { message['dtLimit'] = dtLimit.format('YYYY-MM-DD[T]HH:mm:SS[Z]'); }
     message['dir'] = dir;
@@ -45,15 +46,16 @@ $(document).ready(function() {
         
         // Call initData request
         serverRequest('initData', pars).then(() => {
-            // Create message for loading data
-            var message = createMessageForDataLoad(pars['initDt'], 'left');
-            
-            // Call loadNewData request
-            serverRequest('loadNewData', message).then((data) => {
-                // remove initial form
-                initForm.remove();
-                // draw candlestick chart
-                chart = new candleStick(svg, pars, width, height, data);
+            // Create messages for loading data and call loadNewData request
+            var messageLeft = createMessageForDataLoad(pars['initDt'], 'left');
+            serverRequest('loadNewData', messageLeft).then((dataLeft) => {
+                var messageRight = createMessageForDataLoad(pars['initDt'], 'right');
+                serverRequest('loadNewData', messageRight).then((dataRight) => {
+                    // remove initial form
+                    initForm.remove();
+                    // draw candlestick chart
+                    chart = new candleStick(svg, pars, width, height, dataLeft, dataRight);
+                });
             });
         });
     });
