@@ -303,6 +303,23 @@ class candleStick {
                                                .style("pointer-events", "all")
                                                .attr("clip-path", "url(#clip)");
         
+        // draw pattern buttons
+        this.patternButtons = this.focus.append("foreignObject").attr("id", "patternButtonsObject")
+                                        .append("xhtml:form").attr("id", "patternButtonsForm")
+                                                             .attr("class", "btn-group-toggle")
+                                                             .attr("data-toggle", "buttons");
+        this.bullButtonLabel = this.patternButtons.append("xhtml:label").attr("class", "btn btn-success");
+        this.bullButtonLabel.append("xhtml:input").attr("type", "checkbox")
+                                                  .attr("name", "newPatternButton")
+                                                  .attr("value", "newBullPattern");
+        this.bullButtonLabel.text("NEW BULL PATTERN");
+
+        this.bearButtonLabel = this.patternButtons.append("xhtml:label").attr("class", "btn btn-danger");
+        this.bearButtonLabel.append("xhtml:input").attr("type", "checkbox")
+                                                  .attr("name", "newPatternButton")
+                                                  .attr("value", "newBearPattern");
+        this.bearButtonLabel.text("NEW BEAR PATTERN");
+
         // create zoom object
         // disable zooming (scale factor of one only)
         this.zoom = d3.zoom().scaleExtent([1, 1]);
@@ -325,13 +342,13 @@ class candleStick {
 
         // Draw y-axis
         this.gY = this.focus.append("g").attr("class", "axis").call(this.yAxis);
-        
+
         // Draw x gridlines
-        this.gGX = this.focus.append("g").attr("class", "grid").call(this.xGrid);
+        this.gGX = this.chartBody.append("g").attr("class", "grid").call(this.xGrid);
         
         // Draw y gridlines
-        this.gGY = this.focus.append("g").attr("class", "grid").call(this.yGrid);
-
+        this.gGY = this.chartBody.append("g").attr("class", "grid").call(this.yGrid);
+        
         // draw candles in chart body
         // candles are rect elements
         this.candles = this.chartBody.selectAll(".candle")
@@ -395,7 +412,10 @@ class candleStick {
         this.gGY,
         this.candles,
         this.stems,
-        this.weekendLine;
+        this.weekendLine,
+        this.patternButtons,
+        this.bullButtonLabel,
+        this.bearButtonLabel;
 
         // create svg backbone
         this.svg = svg;

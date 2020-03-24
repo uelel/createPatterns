@@ -1,9 +1,7 @@
 body {
     background-color: white;
-    /*
     font-family: 'Open Sans', sans-serif;
     font-size: 14px;
-    */
 }
 
 #outerFrame {
@@ -16,10 +14,42 @@ body {
 	text-align: justify;
 	border: 0px solid grey;
 	width: 600px;
-	height: 600px;
-	transform: translate(25%, 17%);
+	height: 500px;
+	transform: translate(27%, 30%);
 }
 
+#initForm {
+    display: grid;
+    grid-gap: 5px;
+}
+
+div.special {
+    display: flex;
+    position: relative;
+}
+/*
+label {
+  	margin-right: 15px;
+	text-align: right;
+	display: inline-block;
+	width: 250px;
+	font-weight: normal !important;
+}
+
+label.special {
+    line-height: 26px;
+}
+
+input, select {
+    border: 1px solid grey;
+    border-top-left-radius: 0px;
+    border-bottom-left-radius: 0px;
+    border-top-right-radius: 3px;
+    border-bottom-right-radius: 3px;
+    padding: 2px 4px 2px 4px;
+    text-align: left;
+}
+*/
 .fileUpload {
     position: relative;
 }
@@ -31,6 +61,25 @@ body {
     left: 0;
 	z-index: 1;
 }
+
+.inputIcon {
+    border: 1px solid grey;
+    border-top-left-radius: 3px;
+    border-bottom-left-radius: 3px;
+    border-top-right-radius: 0px;
+    border-bottom-right-radius: 0px;
+    width: 25px;
+    margin-right: -1px;
+    padding: 2px 4px;
+    text-align: center;
+    background-color: #d3d3d3;
+}
+
+#initFormButton {
+	text-align: center;
+}
+
+
 
 #innerFrame {
     fill: none;
@@ -86,8 +135,8 @@ body {
 #patternButtonsObject {
 	text-align: justify;
 	border: 0px solid grey;
-	width: 190px;
-	height: 83px;
+	width: 180px;
+	height: 75px;
 	transform: translate(1%, 1%);
 }
 
