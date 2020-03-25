@@ -96,3 +96,13 @@ body {
     display: grid;
     grid-gap: 5px;
 }
+
+.bullPattern {
+    fill: green;
+    opacity: 0.5;
+}
+
+.bearPattern {
+    fill: red;
+    opacity: 0.5;
+}

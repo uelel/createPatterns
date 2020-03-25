@@ -126,10 +126,34 @@ class candleStick {
 
     drawPatterns(startInd, stopInd) {
 
-        // find patterns in current interval
+        // find visible patterns
         var startDt = this.priceArray[startInd].Date;
         var stopDt = this.priceArray[stopInd].Date;
-        chart.patternArray[0].startDt.isBetween(startDt, stopDt, null, '[]');
+        var visPatIndArray = [];
+        for (let i = 0; i < this.patternArray.length; i++) {
+            if (this.patternArray[i].startDt.isBetween(startDt, stopDt, null, '()') || this.patternArray[i].stopDt.isBetween(startDt, stopDt, null, '()')) { visPatIndArray.push(i); }
+        }
+        
+        // draw visible patterns
+        d3.selectAll("rect.bullPattern").remove();
+        d3.selectAll("rect.bearPattern").remove();
+        var rectClassDict = {'1': 'bullPattern', '-1': 'bearPattern'};
+        console.log(visPatIndArray);
+        for (let i = 0; i < visPatIndArray.length; i++) {
+            let x;
+            if (this.xScale(this.patternArray[visPatIndArray[i]].startDt)) {
+                x = this.xScale(this.patternArray[visPatIndArray[i]].startDt) - this.xBand.bandwidth()/2;
+            } else { x = 0; }
+            let width;
+            if(this.xScale(this.patternArray[visPatIndArray[i]].stopDt)) {
+                width = this.xScale(this.patternArray[visPatIndArray[i]].stopDt) - x + this.xBand.bandwidth()/2;
+            } else { width = this.w; }
+            this.chartBody.append("rect").attr("class", rectClassDict[this.patternArray[visPatIndArray[i]].dir])
+                                         .attr("x", x)
+                                         .attr("y", 0)
+                                         .attr("width", width)
+                                         .attr("height", this.h);
+        }
     }
 
 
@@ -234,6 +258,8 @@ class candleStick {
 
             // draw weekend line if necessary
             this.drawWeekendLine(this.dataPointer-this.noCandles, this.dataPointer);
+
+            this.drawPatterns(this.dataPointer-this.noCandles, this.dataPointer);
 
             this.isLoadingData = false;
         });
