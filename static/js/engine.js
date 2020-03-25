@@ -10,9 +10,17 @@ function createMessageForDataLoad(dtLimit, dir) {
 }
 
 function serverRequest(requestName, messageArray) {
-    return fetch('/'+requestName, {headers: {'Content-Type': 'application/json'},
-                                   method: 'POST',
-                                   body: JSON.stringify(messageArray)})
+    // create url
+    var urlDict = {'initData': '/initData', 'loadNewData': '/loadNewData?'+$.param(messageArray), 'loadPatterns': '/loadPatterns'};
+    // create request method
+    var methodDict = {'initData': 'POST', 'loadNewData': 'GET', 'loadPatterns': 'GET'};
+    // create request body
+    var requestBody = undefined;
+    if (methodDict[requestName] === 'POST') { requestBody = JSON.stringify(messageArray); }
+    //
+    return fetch(urlDict[requestName], {headers: {'Content-Type': 'application/json'},
+                                        method: methodDict[requestName],
+                                        body: requestBody})
         .then((response) => response.json())
         .then((data) => { return data } );
 }
@@ -43,7 +51,7 @@ $(document).ready(function() {
         // Serialize form values
 		var pars = {};
         $.each($(this).serializeArray(), function(i, field) { pars[field.name] = field.value; });
-        
+        console.log(pars);        
         // Call initData request
         serverRequest('initData', pars).then(() => {
             // Create messages for loading data and call loadNewData request

@@ -53,8 +53,7 @@ function createInitForm(svg) {
                             .append("xhtml:i").attr("class", "fa fa-upload");
     patternFileUploadVisible.append("xhtml:input").attr("type", "text")
                                                   .attr("class", "form-control")
-                                                  .attr("name", "patternFileUploadVisible")
-                                                  .attr("value", "No file chosen...   ");
+                                                  .attr("name", "patternFile");
 
     var noCandles = initForm.append("xhtml:div").attr("class", "row form-group justify-content-start");
     noCandles.append("xhtml:label").attr("class", "col-sm-6 col-form-label text-right")

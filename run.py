@@ -74,8 +74,8 @@ class data():
     """Class that creates universal data loading method used in requests"""
 
     loadMethod = None
-    keyargs = dict()
-    #container = pd.DataFrame(columns=['Date', 'Open', 'High', 'Low', 'Close'])
+    loadDataArgs = dict()
+    patternFile = None
 
     @classmethod
     def init(cls, pars):
@@ -83,24 +83,27 @@ class data():
         
         # Reset arguments
         cls.loadMethod = None
-        cls.keyargs = dict()
-        #cls.container = pd.DataFrame(columns=['Date', 'Open', 'High', 'Low', 'Close'])
+        cls.loadDataArgs = dict()
+        cls.patternFile = None
 
+        # specify path for pattern file 
+        cls.patternFile = './static/data/'+pars['patternFile']
+        
         if pars['loadMethod'] == 'influxdb':
             # Specify method for actual data loading
             cls.loadMethod = loadDataFromInfluxdb
             # Specify necessary arguments for loadMethod
-            cls.keyargs['client'] = DataFrameClient(host='127.0.0.1', port=8086, database=pars['dbName'])
+            cls.loadDataArgs['client'] = DataFrameClient(host='127.0.0.1', port=8086, database=pars['dbName'])
             # specify number of preloaded candles
-            cls.keyargs['noCandles'] = 1000
+            cls.loadDataArgs['noCandles'] = 1000
             
         elif pars['loadMethod'] == 'file':
             # Specify method for actual data loading
             cls.loadMethod = loadDataFromFile
             # Specify necessary arguments for loadMethod
-            cls.keyargs['filePath'] = './static/data/'+pars['fileUploadVisible']
+            cls.loadDataArgs['filePath'] = './static/data/'+pars['fileUploadVisible']
             # specify number of preloaded candles
-            cls.keyargs['noCandles'] = 1000
+            cls.loadDataArgs['noCandles'] = 1000
 
         else:
             raise Exception('Data loading method unknown during initialization!')
@@ -113,12 +116,24 @@ class data():
         if direction not in ('left', 'right'):
             raise Exception('Direction unknown during loading new data!')
 
-        return cls.loadMethod(dtLimit, direction, **cls.keyargs)
+        return cls.loadMethod(dtLimit, direction, **cls.loadDataArgs)
+
+    @ classmethod
+    def loadPatterns(cls):
+        """Load and return patterns"""
+
+        try:
+            with open(cls.patternFile, 'r') as patternFile:
+                patterns = json.load(patternFile)
+        except:
+            patterns = ''
+        
+        return patterns
 
 def createResponse(status, message):
     """returns flask Response object"""
     
-    if type(message) == str:
+    if type(message) in (str, list):
         message = json.dumps(message)
     elif type(message) == pd.DataFrame:
         message = message.to_json(date_format='iso', orient='records')
@@ -140,14 +155,19 @@ def initData():
         print(error)
         return createResponse(400, "Error during initiating data connection!")
 
-@app.route("/loadNewData", methods=['POST'])
+@app.route("/loadNewData", methods=['GET'])
 def loadNewData():
-
+    
     try:
-        return createResponse(200, data.load(request.json['dtLimit'], request.json['dir']))
+        return createResponse(200, data.load(request.args.get('dtLimit'), request.args.get('dir')))
     except Exception as error:
         print(error)
         return createResponse(400, "Error during loading new data!")
+
+@app.route("/loadPatterns", methods=['GET'])
+def loadPatterns():
+
+    return createResponse(200, data.loadPatterns())
 
 if __name__ == "__main__":
     app.run(debug=True)

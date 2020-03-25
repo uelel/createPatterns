@@ -5,8 +5,14 @@ class candleStick {
 
     // Function that replaces datetime strings in data array for moment objects 
     parseDates(data) {
-        for (let i = 0; i <= data.length-1; i++) { data[i].Date = moment.utc(data[i].Date, 'YYYY-MM-DD[T]HH:mm:ss.SSS[Z]'); }
-        return data;
+        if (data.length && 'Date' in data[0]) {
+            for (let i = 0; i <= data.length-1; i++) { data[i].Date = moment.utc(data[i].Date, 'YYYY-MM-DD[T]HH:mm:ss.SSS[Z]'); }
+            return data;
+        } else if (data.length && 'startDt' in data[0]) {
+            for (let i = 0; i <= data.length-1; i++) { data[i].startDt = moment.utc(data[i].startDt, 'YYYY-MM-DD[T]HH:mm:ss.SSS[Z]');
+                                                       data[i].stopDt = moment.utc(data[i].stopDt, 'YYYY-MM-DD[T]HH:mm:ss.SSS[Z]'); }
+            return data;
+        }
     }
     
     // Function that creates dt array from data
@@ -117,6 +123,15 @@ class candleStick {
                                          .attr("y2", this.h);
         }
     }
+
+    drawPatterns(startInd, stopInd) {
+
+        // find patterns in current interval
+        var startDt = this.priceArray[startInd].Date;
+        var stopDt = this.priceArray[stopInd].Date;
+        chart.patternArray[0].startDt.isBetween(startDt, stopDt, null, '[]');
+    }
+
 
     // Function that checks whether it is necessary to load new data
     // Loads news data if necessary
@@ -276,8 +291,9 @@ class candleStick {
             
             // Define y gridlines
             this.yGrid = d3.axisLeft().scale(this.yScale).tickValues(this.yTicksArray).tickFormat("").tickSize(-this.w);
-       
-            return resolve();
+
+            // load pattern array
+            serverRequest('loadPatterns', null).then((data) => {data = this.parseDates(data); this.patternArray = data; return resolve();});
         });
     }
 
@@ -379,6 +395,9 @@ class candleStick {
         // draw weekend line if necessary
         this.drawWeekendLine(this.dataPointer-this.noCandles, this.dataPointer);
 
+        // draw existing patterns
+        this.drawPatterns(this.dataPointer-this.noCandles, this.dataPointer);
+
     }
 
     constructor(svg, pars, width, height, dataLeft, dataRight) {
@@ -400,6 +419,9 @@ class candleStick {
         this.xGrid,
         this.yAxis,
         this.yGrid;
+
+        // declare variables for patterns
+        this.patternArray = [];
 
         // declare variables for rendering
         this.focus,
@@ -444,7 +466,7 @@ class candleStick {
 		this.yPrec = parseFloat(pars['yPrec']);
         
         // load up data and then draw chart
-        this.processData(dataLeft, dataRight).then(() => { this.drawChart(); });
+        this.processData(dataLeft, dataRight).then(() => { console.log(this.patternArray); this.drawChart(); });
 
     }
 

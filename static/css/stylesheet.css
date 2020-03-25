@@ -27,8 +27,9 @@ body {
 .fileUploadHidden {
 	opacity: 0;
 	position: absolute;
-	top: 0;
-    left: 0;
+	top: 4px;
+    left: 15px;
+    width: 40px;
 	z-index: 1;
 }
 
