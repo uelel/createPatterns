@@ -12,7 +12,7 @@ class candleStick {
             for (let i = 0; i <= data.length-1; i++) { data[i].startDt = moment.utc(data[i].startDt, 'YYYY-MM-DD[T]HH:mm:ss.SSS[Z]');
                                                        data[i].stopDt = moment.utc(data[i].stopDt, 'YYYY-MM-DD[T]HH:mm:ss.SSS[Z]'); }
             return data;
-        }
+        } else { return data; }
     }
     
     // Function that creates dt array from data
@@ -42,8 +42,6 @@ class candleStick {
         // find first datetime with full hour
         var fullHourInd = startInd;
         for (let i = startInd; i < stopInd-1; i++) {
-            //console.log(i);
-            //console.log(this.dtArray[i]);
             if (this.dtArray[i].minute() === 0) { break; }
             fullHourInd += 1;
         }
@@ -123,7 +121,8 @@ class candleStick {
                                          .attr("y2", this.h);
         }
     }
-
+    
+    // Function that draws patterns in current timeframe
     drawPatterns(startInd, stopInd) {
 
         // find visible patterns
@@ -138,7 +137,6 @@ class candleStick {
         d3.selectAll("rect.bullPattern").remove();
         d3.selectAll("rect.bearPattern").remove();
         var rectClassDict = {'1': 'bullPattern', '-1': 'bearPattern'};
-        console.log(visPatIndArray);
         for (let i = 0; i < visPatIndArray.length; i++) {
             let x;
             if (this.xScale(this.patternArray[visPatIndArray[i]].startDt)) {
@@ -155,7 +153,36 @@ class candleStick {
                                          .attr("height", this.h);
         }
     }
+    
+    // Function that applies logic for toggling pattern creation with button click
+    togglePatternCreation(dir) {
+        // In case of active pattern creation and click on same button
+        if (this.isCreatingNewPattern && dir === this.newPatternDir) { 
+            // Inactivate pattern creation
+            // Activate panning
+            this.svg.call(this.zoom);
+            this.isCreatingNewPattern = !this.isCreatingNewPattern;
+            return;
+        } 
+        // In case of active pattern creation and click on another button
+        else if (this.isCreatingNewPattern && dir !== this.newPatternDir) {
+            // Activate pattern creation with opposite direction
+            this.newPatternDir = dir;
+        }
+        // In case of inactive pattern creation
+        else if (!this.isCreatingNewPattern) {
+            // Activate pattern creation
+            // Inactivate panning
+            this.svg.on('.zoom', null);
+            this.isCreatingNewPattern = !this.isCreatingNewPattern;
+            this.newPatternDir = dir;
+        }
+        console.log(this.isCreatingNewPattern, this.newPatternDir);
+    }
 
+    drawNewPattern() {
+
+    }
 
     // Function that checks whether it is necessary to load new data
     // Loads news data if necessary
@@ -347,20 +374,15 @@ class candleStick {
         
         // draw pattern buttons
         this.patternButtons = this.focus.append("foreignObject").attr("id", "patternButtonsObject")
-                                        .append("xhtml:form").attr("id", "patternButtonsForm")
-                                                             .attr("class", "btn-group-toggle")
-                                                             .attr("data-toggle", "buttons");
-        this.bullButtonLabel = this.patternButtons.append("xhtml:label").attr("class", "btn btn-success");
-        this.bullButtonLabel.append("xhtml:input").attr("type", "checkbox")
-                                                  .attr("name", "newPatternButton")
-                                                  .attr("value", "newBullPattern");
-        this.bullButtonLabel.text("NEW BULL PATTERN");
-
-        this.bearButtonLabel = this.patternButtons.append("xhtml:label").attr("class", "btn btn-danger");
-        this.bearButtonLabel.append("xhtml:input").attr("type", "checkbox")
-                                                  .attr("name", "newPatternButton")
-                                                  .attr("value", "newBearPattern");
-        this.bearButtonLabel.text("NEW BEAR PATTERN");
+                                        .append("xhtml:div").attr("id", "patternButtonsForm");
+        this.patternButtons.append("xhtml:input").attr("type", "button")
+                                                 .attr("class", "btn btn-success")
+                                                 .attr("value", "NEW BULL PATTERN")
+                                                 .on("click", this.togglePatternCreation.bind(this, 1));
+        this.patternButtons.append("xhtml:input").attr("type", "button")
+                                                 .attr("class", "btn btn-danger")
+                                                 .attr("value", "NEW BEAR PATTERN")
+                                                 .on("click", this.togglePatternCreation.bind(this, -1));
 
         // create zoom object
         // disable zooming (scale factor of one only)
@@ -448,6 +470,8 @@ class candleStick {
 
         // declare variables for patterns
         this.patternArray = [];
+        this.isCreatingNewPattern = false;
+        this.newPatternDir = 1;
 
         // declare variables for rendering
         this.focus,
@@ -492,7 +516,7 @@ class candleStick {
 		this.yPrec = parseFloat(pars['yPrec']);
         
         // load up data and then draw chart
-        this.processData(dataLeft, dataRight).then(() => { console.log(this.patternArray); this.drawChart(); });
+        this.processData(dataLeft, dataRight).then(() => { this.drawChart(); });
 
     }
 

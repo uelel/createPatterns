@@ -126,7 +126,7 @@ class data():
             with open(cls.patternFile, 'r') as patternFile:
                 patterns = json.load(patternFile)
         except:
-            patterns = ''
+            patterns = []
         
         return patterns
 
