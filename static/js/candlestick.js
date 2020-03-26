@@ -122,8 +122,8 @@ class candleStick {
         }
     }
     
-    // Function that draws patterns in current timeframe
-    drawPatterns(startInd, stopInd) {
+    // Function that draws existing patterns in current timeframe
+    drawExistingPatterns(startInd, stopInd) {
 
         // find visible patterns
         var startDt = this.priceArray[startInd].Date;
@@ -158,30 +158,95 @@ class candleStick {
     togglePatternCreation(dir) {
         // In case of active pattern creation and click on same button
         if (this.isCreatingNewPattern && dir === this.newPatternDir) { 
+            this.isCreatingNewPattern = !this.isCreatingNewPattern;
             // Inactivate pattern creation
+            this.inactivatePatternCreation();
             // Activate panning
             this.svg.call(this.zoom);
-            this.isCreatingNewPattern = !this.isCreatingNewPattern;
             return;
         } 
         // In case of active pattern creation and click on another button
         else if (this.isCreatingNewPattern && dir !== this.newPatternDir) {
             // Activate pattern creation with opposite direction
             this.newPatternDir = dir;
+            // Activate pattern creation
+            this.activatePatternCreation();
         }
         // In case of inactive pattern creation
         else if (!this.isCreatingNewPattern) {
-            // Activate pattern creation
-            // Inactivate panning
-            this.svg.on('.zoom', null);
             this.isCreatingNewPattern = !this.isCreatingNewPattern;
             this.newPatternDir = dir;
+            // Inactivate panning
+            this.svg.on('.zoom', null);
+            // Activate pattern creation
+            this.activatePatternCreation();
         }
         console.log(this.isCreatingNewPattern, this.newPatternDir);
     }
 
-    drawNewPattern() {
+    // Function that calculates clicked candle from d3.mouse coordinates and returns candle index in dtArray
+    calculateClickedCandle(coord) {
+        return this.dataPointer - this.noCandles + Math.floor((coord[0] - this.xScale.step()*this.xScale.padding()/2)/this.xScale.step());
+    }
 
+    activatePatternCreation() {
+       
+        var drawing = false;
+        var startInd, stopInd;
+        var rectClassDict = {"1": "bullPattern", "-1": "bearPattern"};
+        var rect;
+
+        this.chartBody.on('mousedown', (d, i, nodes) => {
+
+            drawing = true;
+            
+            // calculate index of clicked candle
+            startInd = this.calculateClickedCandle(d3.mouse(nodes[i]));
+            console.log(startInd);
+            
+            rect = this.chartBody.append("rect").attr("class", rectClassDict[this.newPatternDir])
+                                                .attr("x", this.xScale(this.dtArray[startInd]) - this.xScale.step()*this.xScale.padding()/2)
+                                                .attr("y", 0)
+                                                .attr("width", 0)
+                                                .attr("height", this.h);
+            });
+
+        this.chartBody.on('mousemove', (d, i, nodes) => { 
+            if (drawing) {
+                let x1 = this.xScale(this.dtArray[startInd] - this.xScale.step()*this.xScale.padding()/2);
+                let x2 = d3.mouse(nodes[i])[0];
+                if (x2 >= x1) {
+                    rect.attr("x", x1)
+                        .attr("width", x2 - x1);
+                } else if (x2 < x1) {
+                    rect.attr("x", x2)
+                        .attr("width", x1 - x2);
+                }
+            }
+        });
+
+        this.chartBody.on('mouseup', (d, i, nodes) => {
+            
+            stopInd = this.calculateClickedCandle(d3.mouse(nodes[i]));
+            console.log(stopInd);
+            let x1 = this.xScale(this.dtArray[startInd]) - this.xScale.step()*this.xScale.padding()/2;
+            let x2 = this.xScale(this.dtArray[stopInd]);
+            if (x2 >= x1) {
+                x2 += this.xScale.bandwidth();
+                rect.attr("x", x1)
+                    .attr("width", x2 - x1);
+            } else if (x2 < x1) {
+                x2 -= this.xScale.step()*this.xScale.padding()/2;
+                rect.attr("x", x2)
+                    .attr("width", x1 - x2);
+            }
+
+            drawing = false;
+        });
+    }
+
+    inactivatePatternCreation() {
+        this.chartBody.on('mousedown', null);
     }
 
     // Function that checks whether it is necessary to load new data
@@ -233,7 +298,8 @@ class candleStick {
         this.checkAvailData().then(() => {
             
             // update x scale
-            this.xScale = d3.scalePoint().domain(this.dtArray.slice(this.dataPointer-this.noCandles, this.dataPointer)).range([0, this.w]);
+            //this.xScale = d3.scalePoint().domain(this.dtArray.slice(this.dataPointer-this.noCandles, this.dataPointer)).range([0, this.w]);
+            this.xScale.domain(this.dtArray.slice(this.dataPointer-this.noCandles, this.dataPointer));
             
             // create new x ticks
             this.createXTicks(this.dataPointer-this.noCandles, this.dataPointer);
@@ -268,7 +334,7 @@ class candleStick {
             // update candle body
             this.candles.data(this.filterPriceArray(this.dataPointer-this.noCandles, this.dataPointer))
                         .attr("class", d => (d.Open <= d.Close) ? "candleUp" : "candleDown")
-                        .attr('x', d => this.xScale(d.Date) - this.xBand.bandwidth()/2)
+                        .attr('x', d => this.xScale(d.Date))
                         .attr('y', d => this.yScale(Math.max(d.Open, d.Close)))
                         .attr('width', this.xBand.bandwidth())
                         .attr('height', d => (d.Open === d.Close) ? 1 : this.yScale(Math.min(d.Open, d.Close)) - this.yScale(Math.max(d.Open, d.Close)))
@@ -277,8 +343,8 @@ class candleStick {
             // update candle stem
             this.stems.data(this.filterPriceArray(this.dataPointer-this.noCandles, this.dataPointer))
                       .attr("class", d => (d.Open <= d.Close) ? "stemUp" : "stemDown")
-                      .attr("x1", d => this.xScale(d.Date))
-                      .attr("x2", d => this.xScale(d.Date))
+                      .attr("x1", d => this.xScale(d.Date) + this.xScale.bandwidth()/2)
+                      .attr("x2", d => this.xScale(d.Date) + this.xScale.bandwidth()/2)
                       .attr("y1", d => this.yScale(d.High))
                       .attr("y2", d => this.yScale(d.Low))
                       .attr("clip-path", "url(#clip)");
@@ -286,7 +352,7 @@ class candleStick {
             // draw weekend line if necessary
             this.drawWeekendLine(this.dataPointer-this.noCandles, this.dataPointer);
 
-            this.drawPatterns(this.dataPointer-this.noCandles, this.dataPointer);
+            this.drawExistingPatterns(this.dataPointer-this.noCandles, this.dataPointer);
 
             this.isLoadingData = false;
         });
@@ -314,7 +380,8 @@ class candleStick {
             
             // define linear x-axis scale for positioning of candles
             // inital scale displays noCandles of most recent candles
-            this.xScale = d3.scalePoint().domain(this.dtArray.slice(this.dataPointer-this.noCandles, this.dataPointer)).range([0, this.w]);
+            //this.xScale = d3.scalePoint().domain(this.dtArray.slice(this.dataPointer-this.noCandles, this.dataPointer)).range([0, this.w]);
+            this.xScale = d3.scaleBand().domain(this.dtArray.slice(this.dataPointer-this.noCandles, this.dataPointer)).range([0, this.w]).padding(0.3);
 
             // define banded x-axis scale to account for padding between candles
             // band scale accounts for padding between candles; range consists of x positions of candles
@@ -378,11 +445,11 @@ class candleStick {
         this.patternButtons.append("xhtml:input").attr("type", "button")
                                                  .attr("class", "btn btn-success")
                                                  .attr("value", "NEW BULL PATTERN")
-                                                 .on("click", this.togglePatternCreation.bind(this, 1));
+                                                 .on("click", this.togglePatternCreation.bind(this, "1"));
         this.patternButtons.append("xhtml:input").attr("type", "button")
                                                  .attr("class", "btn btn-danger")
                                                  .attr("value", "NEW BEAR PATTERN")
-                                                 .on("click", this.togglePatternCreation.bind(this, -1));
+                                                 .on("click", this.togglePatternCreation.bind(this, "-1"));
 
         // create zoom object
         // disable zooming (scale factor of one only)
@@ -420,11 +487,9 @@ class candleStick {
             .enter()
             .append("rect")
             .attr("class", d => (d.Open <= d.Close) ? "candleUp" : "candleDown")
-             // xBand.bandwidth() returns width of each candle (each band) 
-            .attr('x', d => this.xScale(d.Date) - this.xBand.bandwidth()/2)
+            .attr('x', d => this.xScale(d.Date))
             .attr('y', d => this.yScale(Math.max(d.Open, d.Close)))
             .attr('width', this.xBand.bandwidth())
-             // yScale returns higher positions for lower prices
             .attr('height', d => (d.Open === d.Close) ? 1 : this.yScale(Math.min(d.Open, d.Close)) - this.yScale(Math.max(d.Open, d.Close)))
             .attr("clip-path", "url(#clip)");
 
@@ -434,8 +499,8 @@ class candleStick {
             .enter()
             .append("line")
             .attr("class", d => (d.Open <= d.Close) ? "stemUp" : "stemDown")
-            .attr("x1", d => this.xScale(d.Date))
-            .attr("x2", d => this.xScale(d.Date))
+            .attr("x1", d => this.xScale(d.Date) + this.xScale.bandwidth()/2)
+            .attr("x2", d => this.xScale(d.Date) + this.xScale.bandwidth()/2)
             .attr("y1", d => this.yScale(d.High))
             .attr("y2", d => this.yScale(d.Low))
             .attr("clip-path", "url(#clip)");
@@ -444,7 +509,7 @@ class candleStick {
         this.drawWeekendLine(this.dataPointer-this.noCandles, this.dataPointer);
 
         // draw existing patterns
-        this.drawPatterns(this.dataPointer-this.noCandles, this.dataPointer);
+        this.drawExistingPatterns(this.dataPointer-this.noCandles, this.dataPointer);
 
     }
 
@@ -471,7 +536,7 @@ class candleStick {
         // declare variables for patterns
         this.patternArray = [];
         this.isCreatingNewPattern = false;
-        this.newPatternDir = 1;
+        this.newPatternDir;
 
         // declare variables for rendering
         this.focus,
