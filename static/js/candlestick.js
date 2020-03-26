@@ -189,10 +189,28 @@ class candleStick {
         return this.dataPointer - this.noCandles + Math.floor((coord[0] - this.xScale.step()*this.xScale.padding()/2)/this.xScale.step());
     }
 
+    // Function that shows window confirming new pattern
+    confirmNewPattern(rect, startInd, stopInd) {
+        var date = this.dtArray[startInd].format("DD.MM.YYYY");
+        var time1 = this.dtArray[startInd].format("hh:mm");
+        var time2 = this.dtArray[stopInd].format("hh:mm");
+        bootbox.confirm("Confirm new pattern at "+date+" between "+time1+" and "+time2+" ?", (result) => { console.log(result); } ); 
+		/*
+        if (bootbox.confirm("Confirm new pattern at "+date+" between "+time1+" and "+time2+" ?") == true) {
+			console.log('saving created pattern');
+		} else {
+			rect.remove();
+		}
+        */
+    }
+
     activatePatternCreation() {
        
         var drawing = false;
         var startInd, stopInd;
+        var x1, x2;
+        var bandwidth = this.xScale.bandwidth();
+        var padding = this.xScale.step()*this.xScale.padding();
         var rectClassDict = {"1": "bullPattern", "-1": "bearPattern"};
         var rect;
 
@@ -202,25 +220,22 @@ class candleStick {
             
             // calculate index of clicked candle
             startInd = this.calculateClickedCandle(d3.mouse(nodes[i]));
-            console.log(startInd);
+            x1 = this.xScale(this.dtArray[startInd]) + bandwidth/2
             
             rect = this.chartBody.append("rect").attr("class", rectClassDict[this.newPatternDir])
-                                                .attr("x", this.xScale(this.dtArray[startInd]) - this.xScale.step()*this.xScale.padding()/2)
                                                 .attr("y", 0)
-                                                .attr("width", 0)
                                                 .attr("height", this.h);
             });
 
         this.chartBody.on('mousemove', (d, i, nodes) => { 
             if (drawing) {
-                let x1 = this.xScale(this.dtArray[startInd] - this.xScale.step()*this.xScale.padding()/2);
-                let x2 = d3.mouse(nodes[i])[0];
+                x2 = d3.mouse(nodes[i])[0];
                 if (x2 >= x1) {
-                    rect.attr("x", x1)
-                        .attr("width", x2 - x1);
+                    rect.attr("x", x1 - bandwidth/2 - padding/2)
+                        .attr("width", x2 - x1 + bandwidth/2 + padding/2);
                 } else if (x2 < x1) {
                     rect.attr("x", x2)
-                        .attr("width", x1 - x2);
+                        .attr("width", x1 + bandwidth/2 + padding/2 - x2);
                 }
             }
         });
@@ -228,25 +243,24 @@ class candleStick {
         this.chartBody.on('mouseup', (d, i, nodes) => {
             
             stopInd = this.calculateClickedCandle(d3.mouse(nodes[i]));
-            console.log(stopInd);
-            let x1 = this.xScale(this.dtArray[startInd]) - this.xScale.step()*this.xScale.padding()/2;
-            let x2 = this.xScale(this.dtArray[stopInd]);
+            x2 = this.xScale(this.dtArray[stopInd]) + bandwidth/2;
             if (x2 >= x1) {
-                x2 += this.xScale.bandwidth();
-                rect.attr("x", x1)
-                    .attr("width", x2 - x1);
+                rect.attr("x", x1 - bandwidth/2 - padding/2)
+                    .attr("width", x2 - x1 + bandwidth + padding);
             } else if (x2 < x1) {
-                x2 -= this.xScale.step()*this.xScale.padding()/2;
-                rect.attr("x", x2)
-                    .attr("width", x1 - x2);
+                rect.attr("x", x2 - bandwidth/2 - padding/2)
+                    .attr("width", x1 - x2 + bandwidth + padding);
             }
-
+            
             drawing = false;
+            this.confirmNewPattern(rect, startInd, stopInd);
         });
     }
 
     inactivatePatternCreation() {
         this.chartBody.on('mousedown', null);
+        this.chartBody.on('mousemove', null);
+        this.chartBody.on('mouseup', null);
     }
 
     // Function that checks whether it is necessary to load new data
