@@ -1,5 +1,6 @@
 from flask import Flask, render_template, Response, request, jsonify
 import json
+import os
 from influxdb import DataFrameClient
 import numpy as np
 import pandas as pd
@@ -36,7 +37,7 @@ def loadDataFromFile(dtLimit, direction, filePath, noCandles):
     """Actual implementation of data loading from file"""
     
     # Adjust dtLimit string to match file format
-    dtLimit = datetime.datetime.strptime(dtLimit, '%Y-%m-%dT%H:%M:%SZ')
+    dtLimit = datetime.datetime.strptime(dtLimit, '%Y-%m-%dT%H:%M:%S.000Z')
     dtLimit = timezone('UTC').localize(dtLimit)
     dtLimit = dtLimit.strftime('%Y-%m-%d-%H:%M:%S%z')
 
@@ -118,7 +119,38 @@ class data():
 
         return cls.loadMethod(dtLimit, direction, **cls.loadDataArgs)
 
-    @ classmethod
+    @classmethod
+    def savePattern(cls, startDt, stopDt, direction):
+        """Save new pattern to json file of sorted patterns"""
+
+        if os.path.isfile(cls.patternFile):
+            
+            # load pattern file
+            try:
+                with open(cls.patternFile, 'r') as patternFile:
+                    patterns = json.load(patternFile)
+            except Exception as e:
+                raise Exception('Error during loading pattern file: %s' % e)
+                
+            # append new pattern
+            try:
+                patterns.append({'startDt': startDt, 'stopDt': stopDt, 'dir': direction})
+                # sort updated list by startDt
+                patterns = sorted(patterns, key=lambda p: datetime.datetime.strptime(p['startDt'],'%Y-%m-%dT%H:%M:%S.000Z'))
+            except Exception as e:
+                raise Exception('Error during updating patterns: %s' % e)
+                
+            # dumps updated patterns into file
+            try:
+                with open(cls.patternFile, 'w') as patternFile:
+                    patternFile.write(json.dumps(patterns, indent=4))
+            except Exception as e:
+                raise Exception('Error during saving pattern file: %e' % e)
+        
+        else:
+            raise Exception('Pattern file does not exist!')
+
+    @classmethod
     def loadPatterns(cls):
         """Load and return patterns"""
 
@@ -163,6 +195,16 @@ def loadNewData():
     except Exception as error:
         print(error)
         return createResponse(400, "Error during loading new data!")
+
+@app.route("/savePattern", methods=['POST'])
+def savePattern():
+    
+    try:
+        data.savePattern(request.json['startDt'], request.json['stopDt'], request.json['dir'])
+        return createResponse(200, "New pattern was successfully saved!")
+    except Exception as error:
+        print(error)
+        return createResponse(400, "Error during saving new pattern!")
 
 @app.route("/loadPatterns", methods=['GET'])
 def loadPatterns():

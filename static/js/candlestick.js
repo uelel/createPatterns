@@ -140,11 +140,11 @@ class candleStick {
         for (let i = 0; i < visPatIndArray.length; i++) {
             let x;
             if (this.xScale(this.patternArray[visPatIndArray[i]].startDt)) {
-                x = this.xScale(this.patternArray[visPatIndArray[i]].startDt) - this.xBand.bandwidth()/2;
+                x = this.xScale(this.patternArray[visPatIndArray[i]].startDt) - this.xScale.step()*this.xScale.padding()/2;
             } else { x = 0; }
             let width;
             if(this.xScale(this.patternArray[visPatIndArray[i]].stopDt)) {
-                width = this.xScale(this.patternArray[visPatIndArray[i]].stopDt) - x + this.xBand.bandwidth()/2;
+                width = this.xScale(this.patternArray[visPatIndArray[i]].stopDt) - x + this.xScale.bandwidth() + this.xScale.step()*this.xScale.padding()/2;
             } else { width = this.w; }
             this.chartBody.append("rect").attr("class", rectClassDict[this.patternArray[visPatIndArray[i]].dir])
                                          .attr("x", x)
@@ -154,7 +154,7 @@ class candleStick {
         }
     }
     
-    // Function that applies logic for toggling pattern creation with button click
+    // Function that applies logic for toggling between pattern drawing and panning
     togglePatternCreation(dir) {
         // In case of active pattern creation and click on same button
         if (this.isCreatingNewPattern && dir === this.newPatternDir) { 
@@ -167,10 +167,11 @@ class candleStick {
         } 
         // In case of active pattern creation and click on another button
         else if (this.isCreatingNewPattern && dir !== this.newPatternDir) {
-            // Activate pattern creation with opposite direction
+            // Change pattern direction
             this.newPatternDir = dir;
             // Activate pattern creation
-            this.activatePatternCreation();
+            //this.activatePatternCreation();
+            return;
         }
         // In case of inactive pattern creation
         else if (!this.isCreatingNewPattern) {
@@ -180,8 +181,8 @@ class candleStick {
             this.svg.on('.zoom', null);
             // Activate pattern creation
             this.activatePatternCreation();
+            return;
         }
-        console.log(this.isCreatingNewPattern, this.newPatternDir);
     }
 
     // Function that calculates clicked candle from d3.mouse coordinates and returns candle index in dtArray
@@ -189,22 +190,33 @@ class candleStick {
         return this.dataPointer - this.noCandles + Math.floor((coord[0] - this.xScale.step()*this.xScale.padding()/2)/this.xScale.step());
     }
 
-    // Function that shows window confirming new pattern
-    confirmNewPattern(rect, startInd, stopInd) {
-        var date = this.dtArray[startInd].format("DD.MM.YYYY");
-        var time1 = this.dtArray[startInd].format("hh:mm");
-        var time2 = this.dtArray[stopInd].format("hh:mm");
-        bootbox.confirm("Confirm new pattern at "+date+" between "+time1+" and "+time2+" ?", (result) => { console.log(result); } ); 
-		/*
-        if (bootbox.confirm("Confirm new pattern at "+date+" between "+time1+" and "+time2+" ?") == true) {
-			console.log('saving created pattern');
-		} else {
-			rect.remove();
-		}
-        */
+    // Function that shows window confirming new pattern and handles pattern saving, reloading
+    confirmNewPattern(rect, startInd, stopInd, dir) {
+        var startDt = this.dtArray[startInd];
+        var stopDt = this.dtArray[stopInd];
+        bootbox.confirm("Confirm new pattern at "+startDt.format("DD.MM.YYYY")+" between "+startDt.format("hh:mm")+" and "+stopDt.format("hh:mm")+" ?", (result) => { 
+            if (result === true) { 
+                // Save new pattern
+                serverRequest('savePattern', createMessageForPatternSave(startDt, stopDt, dir)).then(() => {
+                    rect.remove();
+                    // Reload pattern array
+                    serverRequest('loadPatterns', null).then((data) => {
+                        data = this.parseDates(data);
+                        this.patternArray = data;
+                        // Redraw patterns
+                        this.drawExistingPatterns(this.dataPointer-this.noCandles, this.dataPointer);
+                        // inactivate pattern creation
+                        this.isCreatingNewPattern = !this.isCreatingNewPattern;
+                        this.inactivatePatternCreation();
+                        this.svg.call(this.zoom);
+                    });
+                });
+            } else { rect.remove(); }
+        }); 
     }
 
-    activatePatternCreation() {
+    // Function that registers mouse events needed for drawing new patterns
+    activatePatternCreation(dir) {
        
         var drawing = false;
         var startInd, stopInd;
@@ -215,13 +227,10 @@ class candleStick {
         var rect;
 
         this.chartBody.on('mousedown', (d, i, nodes) => {
-
             drawing = true;
-            
             // calculate index of clicked candle
             startInd = this.calculateClickedCandle(d3.mouse(nodes[i]));
             x1 = this.xScale(this.dtArray[startInd]) + bandwidth/2
-            
             rect = this.chartBody.append("rect").attr("class", rectClassDict[this.newPatternDir])
                                                 .attr("y", 0)
                                                 .attr("height", this.h);
@@ -241,7 +250,6 @@ class candleStick {
         });
 
         this.chartBody.on('mouseup', (d, i, nodes) => {
-            
             stopInd = this.calculateClickedCandle(d3.mouse(nodes[i]));
             x2 = this.xScale(this.dtArray[stopInd]) + bandwidth/2;
             if (x2 >= x1) {
@@ -251,12 +259,12 @@ class candleStick {
                 rect.attr("x", x2 - bandwidth/2 - padding/2)
                     .attr("width", x1 - x2 + bandwidth + padding);
             }
-            
             drawing = false;
-            this.confirmNewPattern(rect, startInd, stopInd);
+            this.confirmNewPattern(rect, startInd, stopInd, this.newPatternDir);
         });
     }
 
+    // Function that removes mouse events needed for drawing new patterns
     inactivatePatternCreation() {
         this.chartBody.on('mousedown', null);
         this.chartBody.on('mousemove', null);
