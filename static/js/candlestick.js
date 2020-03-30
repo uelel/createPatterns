@@ -92,10 +92,32 @@ class candleStick {
         return array.filter((row) => { return row.Open != null;});
     }
 
+    // Function that draws candles and stems with data given by current data pointer
+    drawCandlesAndStems() {
+    
+        d3.select("#candles").selectAll("rect").remove();
+        this.candles.selectAll("rect")
+            .data(this.filterPriceArray(this.dataPointer-this.noCandles, this.dataPointer))
+            .enter().append("rect").attr("class", d => (d.Open <= d.Close) ? "candleUp" : "candleDown")
+                                   .attr('x', d => this.xScale(d.Date))
+                                   .attr('y', d => this.yScale(Math.max(d.Open, d.Close)))
+                                   .attr('width', this.xScale.bandwidth())
+                                   .attr('height', d => (d.Open === d.Close) ? 1 : this.yScale(Math.min(d.Open, d.Close)) - this.yScale(Math.max(d.Open, d.Close)))
+                                   .attr("clip-path", "url(#clip)");
+
+        d3.select("#stems").selectAll("line").remove();
+        this.stems.selectAll("line").data(this.filterPriceArray(this.dataPointer-this.noCandles, this.dataPointer))
+                  .enter().append("line").attr("class", d => (d.Open <= d.Close) ? "stemUp" : "stemDown")
+                                         .attr("x1", d => this.xScale(d.Date) + this.xScale.bandwidth()/2)
+                                         .attr("x2", d => this.xScale(d.Date) + this.xScale.bandwidth()/2)
+                                         .attr("y1", d => this.yScale(d.High))
+                                         .attr("y2", d => this.yScale(d.Low))
+                                         .attr("clip-path", "url(#clip)");
+    }
+
     // Function that calculates how many candles are translated from d3.event.transform object
     // Positive value means left shift
     // Negative value means right shift
-    // Returns new data pointer
     calcNoCandlesTranslated(transform) {
         var noTransCandles = Math.floor((this.noCandles/this.w) * transform.x);
         this.dataPointer -= noTransCandles - this.noPrevTransCandles;
@@ -353,27 +375,13 @@ class candleStick {
             // update x title
             this.xTitle.text(this.dateFormatter(this.averDate));
 
-            // update candle body
-            this.candles.data(this.filterPriceArray(this.dataPointer-this.noCandles, this.dataPointer))
-                        .attr("class", d => (d.Open <= d.Close) ? "candleUp" : "candleDown")
-                        .attr('x', d => this.xScale(d.Date))
-                        .attr('y', d => this.yScale(Math.max(d.Open, d.Close)))
-                        .attr('width', this.xBand.bandwidth())
-                        .attr('height', d => (d.Open === d.Close) ? 1 : this.yScale(Math.min(d.Open, d.Close)) - this.yScale(Math.max(d.Open, d.Close)))
-                        .attr("clip-path", "url(#clip)");
-
-            // update candle stem
-            this.stems.data(this.filterPriceArray(this.dataPointer-this.noCandles, this.dataPointer))
-                      .attr("class", d => (d.Open <= d.Close) ? "stemUp" : "stemDown")
-                      .attr("x1", d => this.xScale(d.Date) + this.xScale.bandwidth()/2)
-                      .attr("x2", d => this.xScale(d.Date) + this.xScale.bandwidth()/2)
-                      .attr("y1", d => this.yScale(d.High))
-                      .attr("y2", d => this.yScale(d.Low))
-                      .attr("clip-path", "url(#clip)");
+            // update candles and stems
+            this.drawCandlesAndStems();
 
             // draw weekend line if necessary
             this.drawWeekendLine(this.dataPointer-this.noCandles, this.dataPointer);
-
+            
+            // draw existing patterns
             this.drawExistingPatterns(this.dataPointer-this.noCandles, this.dataPointer);
 
             this.isLoadingData = false;
@@ -502,30 +510,14 @@ class candleStick {
         // Draw y gridlines
         this.gGY = this.chartBody.append("g").attr("class", "grid").call(this.yGrid);
         
-        // draw candles in chart body
-        // candles are rect elements
-        this.candles = this.chartBody.selectAll(".candle")
-            .data(this.filterPriceArray(this.dataPointer-this.noCandles, this.dataPointer))
-            .enter()
-            .append("rect")
-            .attr("class", d => (d.Open <= d.Close) ? "candleUp" : "candleDown")
-            .attr('x', d => this.xScale(d.Date))
-            .attr('y', d => this.yScale(Math.max(d.Open, d.Close)))
-            .attr('width', this.xBand.bandwidth())
-            .attr('height', d => (d.Open === d.Close) ? 1 : this.yScale(Math.min(d.Open, d.Close)) - this.yScale(Math.max(d.Open, d.Close)))
-            .attr("clip-path", "url(#clip)");
+        // Create container for candles
+        this.candles = this.chartBody.append("g").attr("id", "candles");
 
-        // draw high-low lines in chart body
-        this.stems = this.chartBody.selectAll("g.line")
-            .data(this.filterPriceArray(this.dataPointer-this.noCandles, this.dataPointer))
-            .enter()
-            .append("line")
-            .attr("class", d => (d.Open <= d.Close) ? "stemUp" : "stemDown")
-            .attr("x1", d => this.xScale(d.Date) + this.xScale.bandwidth()/2)
-            .attr("x2", d => this.xScale(d.Date) + this.xScale.bandwidth()/2)
-            .attr("y1", d => this.yScale(d.High))
-            .attr("y2", d => this.yScale(d.Low))
-            .attr("clip-path", "url(#clip)");
+        // Create container for stems
+        this.stems = this.chartBody.append("g").attr("id", "stems");
+
+        // Draw candles and stems
+        this.drawCandlesAndStems();
         
         // draw weekend line if necessary
         this.drawWeekendLine(this.dataPointer-this.noCandles, this.dataPointer);
