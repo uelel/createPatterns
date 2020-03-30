@@ -277,12 +277,13 @@ class candleStick {
             if (x2 >= x1) {
                 rect.attr("x", x1 - bandwidth/2 - padding/2)
                     .attr("width", x2 - x1 + bandwidth + padding);
+                this.confirmNewPattern(rect, startInd, stopInd, this.newPatternDir);
             } else if (x2 < x1) {
                 rect.attr("x", x2 - bandwidth/2 - padding/2)
                     .attr("width", x1 - x2 + bandwidth + padding);
+                this.confirmNewPattern(rect, stopInd, startInd, this.newPatternDir);
             }
             drawing = false;
-            this.confirmNewPattern(rect, startInd, stopInd, this.newPatternDir);
         });
     }
 
