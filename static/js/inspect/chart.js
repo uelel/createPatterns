@@ -1,4 +1,4 @@
-class candleStick {
+class chart {
 
     // Function that rounds float to given precision and returns rounded float
     roundFloat(number) { return parseFloat(number.toFixed(this.yPrec)); }
@@ -528,7 +528,7 @@ class candleStick {
 
     }
 
-    constructor(svg, pars, width, height, dataLeft, dataRight) {
+    constructor(svg, pars, width, height, patterns) {
         
         // declare variables for data processing
         this.dataPointer,
@@ -576,7 +576,7 @@ class candleStick {
         this.height = height;
 
         // define margins
-        this.margin = { top: 15, right: 30, bottom: 80, left: 80 },
+        this.margin = { top: 200, right: 200, bottom: 100, left: 200 },
 	    this.w = this.width - this.margin.left - this.margin.right,
 		this.h = this.height - this.margin.top - this.margin.bottom;
 		
@@ -596,7 +596,7 @@ class candleStick {
 		this.yPrec = parseFloat(pars['yPrec']);
         
         // load up data and then draw chart
-        this.processData(dataLeft, dataRight).then(() => { this.drawChart(); });
+        //this.processData(dataLeft, dataRight).then(() => { this.drawChart(); });
 
     }
 
