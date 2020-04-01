@@ -54,7 +54,7 @@ function createInitForm(svg) {
     noCandles.append("xhtml:div").attr("class", "col-sm-2")
              .append("xhtml:input").attr("type", "text")
                                    .attr("class", "form-control")
-                                   .attr("value", "160")
+                                   .attr("value", "100")
                                    .attr("name", "noCandles");
 
     var xStep = initForm.append("xhtml:div").attr("class", "row form-group justify-content-start");

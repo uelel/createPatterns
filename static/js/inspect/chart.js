@@ -21,9 +21,8 @@ class Chart {
     }
 
     // Function that returns middle date object from array of dates
-    getAverDate(startInd, endInd) {
-        var arraySlice = this.dtArray.slice(startInd, endInd);
-        this.averDate = arraySlice[Math.floor(arraySlice.length / 2)];
+    getAverDate() {
+        this.averDate = this.dtArray[Math.floor(this.dtArray.length / 2)];
     }
 
     // Function that returns formatted date for x axis title
@@ -35,27 +34,27 @@ class Chart {
     }
 
     // Function that creates array of x axis ticks
-    createXTicks(startInd, stopInd) {
+    createXTicks() {
         // delete previous array content
         this.xTicksArray = [];
         
         // find first datetime with full hour
-        var fullHourInd = startInd;
-        for (let i = startInd; i < stopInd-1; i++) {
+        var fullHourInd = 0;
+        for (let i = 0; i < this.dtArray.length; i++) {
             if (this.dtArray[i].minute() === 0) { break; }
             fullHourInd += 1;
         }
 
         // create ticks left from full hour dt
         var noLabelCount = 1;
-        for (let i = fullHourInd-1; i >= startInd; i--) {
+        for (let i = fullHourInd-1; i >= 0; i--) {
             if (noLabelCount === this.xStep) { this.xTicksArray.push(this.dtArray[i]); noLabelCount = 1; }
             else { noLabelCount += 1; }
         }
 
         // create ticks right from full hour dt
         var noLabelCount = this.xStep;
-        for (let i = fullHourInd; i < stopInd-1; i++) {
+        for (let i = fullHourInd; i < this.dtArray.length; i++) {
             if (noLabelCount === this.xStep) { this.xTicksArray.push(this.dtArray[i]); noLabelCount = 1; }
             else { noLabelCount += 1; }
         }
@@ -68,9 +67,9 @@ class Chart {
     xValuesFormatter(dt) { return dt.format('HH:mm'); }
 
     // Function that calculates limits of y axis so that its length is equal to yRange and data is centered
-    getYLimits(dtArrayStart, dtArrayEnd) {
+    getYLimits() {
         var ohlcArray = [];
-        for(let i = dtArrayStart; i < dtArrayEnd; i++){
+        for(let i = 0; i < this.dtArray.length; i++){
             ohlcArray.push(parseFloat(this.priceArray[i].Open), parseFloat(this.priceArray[i].High), parseFloat(this.priceArray[i].Low), parseFloat(this.priceArray[i].Close));
         }
         var middlePrice = (d3.max(ohlcArray) - d3.min(ohlcArray))/2 + d3.min(ohlcArray);
@@ -88,10 +87,9 @@ class Chart {
 
     
 
-    // Function that returns slice of price array with removed missing candles
+    // Function that returns  price array with removed missing candles
     filterPriceArray(startInd, stopInd) {
-        var array = this.priceArray.slice(startInd, stopInd);
-        return array.filter((row) => { return row.Open != null;});
+        return this.priceArray.filter((row) => { return row.Open != null;});
     }
 
     // Function that draws candles and stems with data given by current data pointer
@@ -534,10 +532,84 @@ class Chart {
         this.drawExistingPatterns(this.dataPointer-this.noCandles, this.dataPointer);
 
     }
+    
+    // Function that returns middle dt object of pattern with given pointer
+    getPatternMiddleDt(pointer) {
+        var startDt = this.patternArray[pointer]['startDt'];
+        var stopDt = this.patternArray[pointer]['stopDt'];
+        var noMinutes = Math.floor(stopDt.diff(startDt, 'minutes')/2);
+        return startDt.clone().add(noMinutes, 'minutes');
+    }
+
+    // Function that calculates datetime for loading new data based on pattern with given pointer
+    getDtForDataLoad(pointer) {
+        return this.getPatternMiddleDt(pointer).add(Math.floor(this.noCandles/2), 'minutes');
+    }
+
+    // Function that returns chart title based on given pointer
+    createChartTitle(pointer) {
+        return (pointer+1) + "/" + this.patternArray.length;
+    }
 
     drawPattern(pointer) {
 
-        // send server request of loading data for given pattern
+        // calculate datetime for request
+        var dt = this.getDtForDataLoad(pointer);
+
+        // load data for given pattern
+        serverRequest('loadNewData', 'inspect', createMessageForDataLoad(dt, 'left')).then((data) => {
+            
+            data = this.parseDates(data);
+            this.priceArray = data;
+            this.createDtArray();
+            
+            this.getAverDate();
+            this.xScale.domain(this.dtArray);
+            this.createXTicks();
+            this.getYLimits();
+            this.createYTicks();
+            this.yScale.domain([this.yLimitArray[0], this.yLimitArray[1]]);
+            this.xAxis.scale(this.xScale).tickValues(this.xTicksArray);
+            this.yAxis.scale(this.yScale).tickValues(this.yTicksArray);
+            this.xGrid.scale(this.xScale).tickValues(this.xTicksArray);
+            this.yGrid.scale(this.yScale).tickValues(this.yTicksArray);
+            console.log(this.yTicksArray);
+
+            this.xAxisCon.call(this.xAxis);
+            this.yAxisCon.call(this.yAxis);
+            this.xGridCon.call(this.xGrid);
+            this.yGridCon.call(this.yGrid);
+            this.xTitle.text(this.dateFormatter(this.averDate));
+
+            d3.select("#candles").selectAll("rect").remove();
+            this.candles.selectAll("rect")
+                .data(this.filterPriceArray())
+                .enter().append("rect").attr("class", d => (d.Open <= d.Close) ? "candleUp" : "candleDown")
+                                       .attr('x', d => this.xScale(d.Date))
+                                       .attr('y', d => this.yScale(Math.max(d.Open, d.Close)))
+                                       .attr('width', this.xScale.bandwidth())
+                                       .attr('height', d => (d.Open === d.Close) ? 1 : this.yScale(Math.min(d.Open, d.Close)) - this.yScale(Math.max(d.Open, d.Close)));
+
+            d3.select("#stems").selectAll("line").remove();
+            this.stems.selectAll("line").data(this.filterPriceArray())
+                      .enter().append("line").attr("class", d => (d.Open <= d.Close) ? "stemUp" : "stemDown")
+                                             .attr("x1", d => this.xScale(d.Date) + this.xScale.bandwidth()/2)
+                                             .attr("x2", d => this.xScale(d.Date) + this.xScale.bandwidth()/2)
+                                             .attr("y1", d => this.yScale(d.High))
+                                             .attr("y2", d => this.yScale(d.Low));
+
+            d3.select("#pattern").selectAll("rect").remove();
+            this.pattern.append("rect").attr("class", this.rectClassDict[this.patternArray[pointer].dir])
+                                         .attr("x", this.xScale(this.patternArray[pointer].startDt) - this.xScale.step()*this.xScale.padding()/2)
+                                         .attr("y", 0)
+                                         .attr("width", this.xScale(this.patternArray[pointer].stopDt) - this.xScale(this.patternArray[pointer].startDt) 
+                                                                    + this.xScale.bandwidth() + this.xScale.step()*this.xScale.padding())
+                                         .attr("height", this.chartBodyDim.h);
+            
+            d3.select("#patternLength").selectAll("text").remove();
+            this.patternLength.append("text").attr("transform", "translate(" + this.xScale(this.getPatternMiddleDt(pointer)) + " , 0)")
+                                             .text(this.patternArray[pointer].stopDt.diff(this.patternArray[pointer].startDt, 'minutes')+1);
+        });
 
     }
 
@@ -560,6 +632,7 @@ class Chart {
         this.xGrid,
         this.yAxis,
         this.yGrid;
+        this.rectClassDict = {'1': 'bullPattern', '-1': 'bearPattern'};
 
         // declare variables for patterns
         this.patternArray = [];
@@ -626,7 +699,7 @@ class Chart {
                                                          .attr("class", "btn btn-primary")
                                   .append("xhtml:div").attr("class", "fa fa-arrow-right");
         
-        this.chartBodyMargin = { top: 100, right: 100, bottom: 100, left: 100 },
+        this.chartBodyMargin = { top: 30, right: 30, bottom: 70, left: 80 },
 	    this.chartBodyDim = { w: this.chartAreaDim.w - this.chartBodyMargin.left - this.chartBodyMargin.right,
                               h: this.chartAreaDim.h - this.chartBodyMargin.top - this.chartBodyMargin.bottom },
        
@@ -650,18 +723,33 @@ class Chart {
                                             .attr("transform", "translate(" + this.chartBodyMargin.left + "," + (this.chartBodyMargin.top + this.chartBodyDim.h) + ")");
 
         this.xTitle = this.chartArea.append("text").attr("transform", "translate(" + (this.chartBodyMargin.left + this.chartBodyDim.w/2) + " ,"
-                                                                                   + (this.chartBodyMargin.top + this.chartBodyDim.h) + ")")
-                                               .style("text-anchor", "middle");
+                                                                                   + (this.chartBodyMargin.top + this.chartBodyDim.h + 45) + ")")
+                                                   .style("text-anchor", "middle");
         
-        this.yAxisCon = this.chartArea.append("g").attr("class", "axis");
+        this.patternLength = this.chartArea.append("g").attr("transform", "translate(" + this.chartBodyMargin.left + ", " + (this.chartBodyMargin.top-4) + ")")
+                                                       .attr("id", "patternLength")
+                                                       .attr("class", "axis");
         
+        this.xAxis = d3.axisBottom().tickFormat(this.xValuesFormatter);
+
+        this.yAxisCon = this.chartArea.append("g").attr("class", "axis")
+                                                  .attr("transform", "translate(" + this.chartBodyMargin.left + "," + this.chartBodyMargin.top + ")");
+        
+        this.yAxis = d3.axisLeft().tickFormat(d3.format("."+this.yPrec+"f"));
+
         this.xGridCon = this.chartBody.append("g").attr("class", "grid");
         
-        this.xGridCon = this.chartBody.append("g").attr("class", "grid");
+        this.xGrid = d3.axisBottom().tickFormat("").tickSize(this.chartBodyDim.h);
+        
+        this.yGridCon = this.chartBody.append("g").attr("class", "grid");
+        
+        this.yGrid = d3.axisLeft().tickFormat("").tickSize(-this.chartBodyDim.w);
         
         this.candles = this.chartBody.append("g").attr("id", "candles");
 
         this.stems = this.chartBody.append("g").attr("id", "stems");
+
+        this.pattern = this.chartBody.append("g").attr("id", "pattern");
         
 
         

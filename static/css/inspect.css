@@ -81,19 +81,6 @@ body {
     stroke-dasharray: 2px;
 }
 
-#patternButtonsObject {
-	text-align: justify;
-	border: 0px solid grey;
-	width: 190px;
-	height: 83px;
-	transform: translate(1%, 1%);
-}
-
-#patternButtonsForm {
-    display: grid;
-    grid-gap: 5px;
-}
-
 .bullPattern {
     fill: green;
     opacity: 0.5;

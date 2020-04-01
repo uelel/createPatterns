@@ -12,7 +12,7 @@ class dataHandler():
 
     @classmethod
     def init(cls, pars):
-        """Create arguments necessary to load new data"""
+        """Initiate arguments necessary to perform data operations"""
         
         # Reset arguments
         cls.loadMethod = None
@@ -21,29 +21,31 @@ class dataHandler():
 
         # specify path for pattern file 
         cls.patternFile = './static/data/'+pars['patternFile']
-        
+       
+        # specify arguments for data loading
         if pars['loadMethod'] == 'influxdb':
             # Specify method for actual data loading
             cls.loadMethod = loadDataFromInfluxdb
-            # Specify necessary arguments for loadMethod
+            # influxdb client
             cls.loadDataArgs['client'] = DataFrameClient(host='127.0.0.1', port=8086, database=pars['dbName'])
-            # specify number of preloaded candles
-            cls.loadDataArgs['noCandles'] = 1000
-            
+
         elif pars['loadMethod'] == 'file':
             # Specify method for actual data loading
             cls.loadMethod = loadDataFromFile
-            # Specify necessary arguments for loadMethod
+            # filename
             cls.loadDataArgs['filePath'] = './static/data/'+pars['fileUploadVisible']
-            # specify number of preloaded candles
-            cls.loadDataArgs['noCandles'] = 1000
 
         else:
-            raise Exception('Data loading method unknown during initialization!')
+            raise Exception('Data loading method %s unknown during initialization!' % pars['loadMethod'])
+        
+        # specify number of preloaded candles
+        if pars['t'] == 'create': cls.loadDataArgs['noCandles'] = 1000
+        elif pars['t'] == 'inspect': cls.loadDataArgs['noCandles'] = int(pars['noCandles'])
+        else: raise Exception('Template %s unknown during initialization!' % pars['t'])
 
     @classmethod
     def load(cls, dtLimit, direction):
-        """Call loadMethod
+        """Call method for actual data loading
            Returns loaded data"""
 
         if direction not in ('left', 'right'):

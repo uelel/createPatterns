@@ -27,7 +27,7 @@ function serverRequest(requestName, template, messageArray) {
     var methodDict = {'initData': 'POST', 'loadNewData': 'GET', 'loadPatterns': 'GET', 'savePattern': 'POST'};
     // create request body
     var requestBody = undefined;
-    if (methodDict[requestName] === 'POST') { requestBody = JSON.stringify(messageArray); }
+    if (methodDict[requestName] === 'POST') { messageArray['t'] = template; requestBody = JSON.stringify(messageArray); }
     //
     return fetch(urlDict[requestName], {headers: {'Content-Type': 'application/json'},
                                         method: methodDict[requestName],
