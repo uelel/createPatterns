@@ -219,10 +219,10 @@ class candleStick {
         bootbox.confirm("Confirm new pattern at "+startDt.format("DD.MM.YYYY")+" between "+startDt.format("HH:mm")+" and "+stopDt.format("HH:mm")+" ?", (result) => { 
             if (result === true) { 
                 // Save new pattern
-                serverRequest('savePattern', createMessageForPatternSave(startDt, stopDt, dir)).then(() => {
+                serverRequest('savePattern', 'create', createMessageForPatternSave(startDt, stopDt, dir)).then(() => {
                     rect.remove();
                     // Reload pattern array
-                    serverRequest('loadPatterns', null).then((data) => {
+                    serverRequest('loadPatterns', 'create', null).then((data) => {
                         data = this.parseDates(data);
                         this.patternArray = data;
                         // Redraw patterns
@@ -313,7 +313,7 @@ class candleStick {
             console.log('continuing to serverRequest'); 
             // load new data if necessary
             this.isLoadingData = true;
-            serverRequest('loadNewData', message).then((data) => {
+            serverRequest('loadNewData', 'create', message).then((data) => {
                 if (dir === 'left') { 
                     this.dataPointer += data.length;
                     data = this.parseDates(data);
@@ -444,7 +444,7 @@ class candleStick {
             this.yGrid = d3.axisLeft().scale(this.yScale).tickValues(this.yTicksArray).tickFormat("").tickSize(-this.w);
 
             // load pattern array
-            serverRequest('loadPatterns', null).then((data) => {data = this.parseDates(data); this.patternArray = data; return resolve();});
+            serverRequest('loadPatterns', 'create', null).then((data) => {data = this.parseDates(data); this.patternArray = data; return resolve();});
         });
     }
 

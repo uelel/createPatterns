@@ -1,8 +1,7 @@
 from flask import Flask, render_template, Response, request
 import json
 import pandas as pd
-from createPatterns import dataHandler as createDataHandler
-from inspectPatterns import dataHandler as inspectDataHandler
+from data import dataHandler
 
 def createResponse(status, message):
     """returns flask Response object"""
@@ -27,7 +26,7 @@ def inspectPatterns():
 def initData():
     
     try:
-        createDataHandler.init(request.json)
+        dataHandler.init(request.json)
         return createResponse(200, "Data connection successfully initialized!")
     except Exception as error:
         print(error)
@@ -37,7 +36,7 @@ def initData():
 def loadNewData():
     
     try:
-        return createResponse(200, createDataHandler.load(request.args.get('dtLimit'), request.args.get('dir')))
+        return createResponse(200, dataHandler.load(request.args.get('dtLimit'), request.args.get('dir')))
     except Exception as error:
         print(error)
         return createResponse(400, "Error during loading new data!")
@@ -46,7 +45,7 @@ def loadNewData():
 def savePattern():
     
     try:
-        createDataHandler.savePattern(request.json['startDt'], request.json['stopDt'], request.json['dir'])
+        dataHandler.savePattern(request.json['startDt'], request.json['stopDt'], request.json['dir'])
         return createResponse(200, "New pattern was successfully saved!")
     except Exception as error:
         print(error)
@@ -55,7 +54,7 @@ def savePattern():
 @app.route("/loadPatterns", methods=['GET'])
 def loadPatterns():
 
-    return createResponse(200, createDataHandler.loadPatterns())
+    return createResponse(200, dataHandler.loadPatterns(request.args.get('t')))
 
 if __name__ == "__main__":
     app.run(debug=True)

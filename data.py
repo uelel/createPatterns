@@ -1,10 +1,10 @@
-import json
 import os
+import json
 import datetime
 from dataLoad import loadDataFromInfluxdb, loadDataFromFile, DataFrameClient
 
 class dataHandler():
-    """Class that is universal handler of data loading"""
+    """Class that is a universal handler for data loading"""
 
     loadMethod = None
     loadDataArgs = dict()
@@ -83,18 +83,33 @@ class dataHandler():
             raise Exception('Pattern file does not exist!')
 
     @classmethod
-    def loadPatterns(cls):
+    def loadPatterns(cls, t):
         """Load and return patterns"""
 
-        if os.path.isfile(cls.patternFile):
+        if t == 'create':
             
             try:
                 with open(cls.patternFile, 'r') as patternFile:
                     patterns = json.load(patternFile)
-                return patterns
+            except:
+                patterns = []
             
-            except Exception as e:
-                raise Exception('Error during loading pattern file: %s' % e)
-        
+            return patterns
+
+        elif t == 'inspect':
+
+            if os.path.isfile(cls.patternFile):
+                
+                try:
+                    with open(cls.patternFile, 'r') as patternFile:
+                        patterns = json.load(patternFile)
+                    return patterns
+                
+                except Exception as e:
+                    raise Exception('Error during loading pattern file: %s' % e)
+            
+            else:
+                raise Exception('Pattern file %s does not exist!' % (cls.patternFile))
+
         else:
-            raise Exception('Pattern file does not exist!')
+            raise Exception('Unknown template!')

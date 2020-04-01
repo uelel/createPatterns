@@ -1,4 +1,4 @@
-class chart {
+class Chart {
 
     // Function that rounds float to given precision and returns rounded float
     roundFloat(number) { return parseFloat(number.toFixed(this.yPrec)); }
@@ -85,6 +85,8 @@ class chart {
         }
         this.yTicksArray = labelsArray;
     }
+
+    
 
     // Function that returns slice of price array with removed missing candles
     filterPriceArray(startInd, stopInd) {
@@ -390,10 +392,13 @@ class chart {
     }
 
     // Function that process initial data
-    processData(dataLeft, dataRight) {
+    processData(patterns) {
 
         return new Promise((resolve, reject) => {
             
+            this.patternArray = this.parseDates(patterns);
+
+            /*
             this.dataPointer = dataLeft.length;
 
             // Parse dates to moment objects
@@ -445,6 +450,8 @@ class chart {
 
             // load pattern array
             serverRequest('loadPatterns', null).then((data) => {data = this.parseDates(data); this.patternArray = data; return resolve();});
+            */
+            return resolve();
         });
     }
 
@@ -528,6 +535,12 @@ class chart {
 
     }
 
+    drawPattern(pointer) {
+
+        // send server request of loading data for given pattern
+
+    }
+
     constructor(svg, pars, width, height, patterns) {
         
         // declare variables for data processing
@@ -569,35 +582,97 @@ class chart {
         this.bullButtonLabel,
         this.bearButtonLabel;
 
+		this.noCandles = parseFloat(pars['noCandles']);
+        this.yRange = parseFloat(pars['yRange']);
+        this.xStep = parseFloat(pars['xStep']);
+		this.yStep = parseFloat(pars['yStep']);
+		this.yPrec = parseFloat(pars['yPrec']);
+        
         // create svg backbone
         this.svg = svg;
 
         this.width = width,
         this.height = height;
 
-        // define margins
-        this.margin = { top: 200, right: 200, bottom: 100, left: 200 },
-	    this.w = this.width - this.margin.left - this.margin.right,
-		this.h = this.height - this.margin.top - this.margin.bottom;
-		
-		// define number of candles displayed
-		this.noCandles = parseFloat(pars['noCandles']);
-		
-		// define range of y axis
-        this.yRange = parseFloat(pars['yRange']);
-
-        // define number of minutes between x ticks
-        this.xStep = parseFloat(pars['xStep']);
-		
-		// define step of y ticks
-		this.yStep = parseFloat(pars['yStep']);
-		
-		// define number of decimal points of y labels
-		this.yPrec = parseFloat(pars['yPrec']);
+        this.mainArea = this.svg.append("g").attr("transform", "translate(0, 0)");
         
-        // load up data and then draw chart
-        //this.processData(dataLeft, dataRight).then(() => { this.drawChart(); });
+        this.chartAreaMargin = { top: 100, right: 100, bottom: 100, left: 100 },
+	    this.chartAreaDim = { w: this.width - this.chartAreaMargin.left - this.chartAreaMargin.right,
+                              h: this.height - this.chartAreaMargin.top - this.chartAreaMargin.bottom },
+        
+        this.chartArea = this.mainArea.append("g").attr("transform", "translate(" + this.chartAreaMargin.left + "," + this.chartAreaMargin.top + ")");
+        
+        this.chartArea.append("rect").attr("id", "outerFrame")
+                                .attr("width", this.chartAreaDim.w)
+                                .attr("height", this.chartAreaDim.h);
+        
+        this.prevButton = this.svg.append("foreignObject").attr("x", "0")
+                                                          .attr("y", this.chartAreaMargin.top)
+                                                          .attr("width", this.chartAreaMargin.left)
+                                                          .attr("height", this.chartAreaDim.h)
+                                  .append("xhtml:div").attr("class", "row h-100 align-items-center text-center")
+                                  .append("xhtml:div").attr("class", "col")
+                                  .append("xhtml:button").attr("type", "button")
+                                                         .attr("class", "btn btn-primary")
+                                  .append("xhtml:div").attr("class", "fa fa-arrow-left");
+        
+        this.nextButton = this.svg.append("foreignObject").attr("x", this.chartAreaMargin.left + this.chartAreaDim.w)
+                                                          .attr("y", this.chartAreaMargin.top)
+                                                          .attr("width", this.chartAreaMargin.right)
+                                                          .attr("height", this.chartAreaDim.h)
+                                  .append("xhtml:div").attr("class", "row h-100 align-items-center text-center")
+                                  .append("xhtml:div").attr("class", "col")
+                                  .append("xhtml:button").attr("type", "button")
+                                                         .attr("class", "btn btn-primary")
+                                  .append("xhtml:div").attr("class", "fa fa-arrow-right");
+        
+        this.chartBodyMargin = { top: 100, right: 100, bottom: 100, left: 100 },
+	    this.chartBodyDim = { w: this.chartAreaDim.w - this.chartBodyMargin.left - this.chartBodyMargin.right,
+                              h: this.chartAreaDim.h - this.chartBodyMargin.top - this.chartBodyMargin.bottom },
+       
+        /*
+        this.svg.append("defs").append("clipPath").attr("id", "clip")
+                               .append("rect").attr("x", this.chartAreaMargin.left + this.chartBodyMargin.left)
+                                              .attr("y", this.chartAreaMargin.top + this.chartBodyMargin.top)
+                                              .attr("width", this.chartBodyDim.w)
+                                              .attr("height", this.chartBodyDim.h);
+        */
+        
+        this.chartBody = this.chartArea.append("g").attr("transform", "translate(" + this.chartBodyMargin.left + "," + this.chartBodyMargin.top + ")")
+                                                   .style("pointer-events", "all")
+                                                   .attr("clip-path", "url(#clip)");
+        
+        this.chartBody.append("rect").attr("id", "innerFrame")
+                                     .attr("width", this.chartBodyDim.w)
+                                     .attr("height", this.chartBodyDim.h);
+        
+        this.xAxisCon = this.chartArea.append("g").attr("class", "axis")
+                                            .attr("transform", "translate(" + this.chartBodyMargin.left + "," + (this.chartBodyMargin.top + this.chartBodyDim.h) + ")");
 
+        this.xTitle = this.chartArea.append("text").attr("transform", "translate(" + (this.chartBodyMargin.left + this.chartBodyDim.w/2) + " ,"
+                                                                                   + (this.chartBodyMargin.top + this.chartBodyDim.h) + ")")
+                                               .style("text-anchor", "middle");
+        
+        this.yAxisCon = this.chartArea.append("g").attr("class", "axis");
+        
+        this.xGridCon = this.chartBody.append("g").attr("class", "grid");
+        
+        this.xGridCon = this.chartBody.append("g").attr("class", "grid");
+        
+        this.candles = this.chartBody.append("g").attr("id", "candles");
+
+        this.stems = this.chartBody.append("g").attr("id", "stems");
+        
+
+        
+        this.xScale = d3.scaleBand().range([0, this.chartBodyDim.w]).padding(0.3);
+        this.yScale = d3.scaleLinear().range([this.chartBodyDim.h, 0]);
+
+        // process patterns and call loading of first pattern
+        this.patternArray = this.parseDates(patterns);
+        console.log(this.patternArray);
+
+        this.drawPattern(0);
     }
 
 }

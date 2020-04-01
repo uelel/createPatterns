@@ -2,7 +2,7 @@ function createInitForm(svg) {
 
     var initForm = svg.append("foreignObject").attr("id", "initObject")
                       .append("xhtml:form").attr("id", "initForm");
-                                 
+    
     var patternFile = initForm.append("xhtml:div").attr("class", "row form-group justify-content-start");
     patternFile.append("xhtml:label").attr("class", "col-sm-6 col-form-label text-right")
                                      .text("Pattern file:");
@@ -17,6 +17,15 @@ function createInitForm(svg) {
     patternFileUploadVisible.append("xhtml:input").attr("type", "text")
                                                   .attr("class", "form-control")
                                                   .attr("name", "patternFile");
+    
+    var patternLength = initForm.append("xhtml:div").attr("class", "row form-group justify-content-start");
+    patternLength.append("xhtml:label").attr("class", "col-sm-6 col-form-label text-right")
+                                       .text("Pattern length in minutes:");
+    patternLength.append("xhtml:div").attr("class", "col-sm-2")
+                 .append("xhtml:input").attr("type", "text")
+                                       .attr("class", "form-control")
+                                       .attr("value", "")
+                                       .attr("name", "patternLength");
     
     var loadMethod = initForm.append("xhtml:div").attr("class", "row form-group justify-content-start");
     loadMethod.append("xhtml:label").attr("class", "col-sm-6  col-form-label text-right")
@@ -138,7 +147,7 @@ function createInitForm(svg) {
     // Change value of visible input to path of selected pattern file
     $('input[name=patternFileUploadHidden]').change(function() {
         var fileName = $(this).val().replace(/C:\\fakepath\\/i, '');
-        $('input[name=patternFileUploadVisible]').val(fileName);
+        $('input[name=patternFile]').val(fileName);
     });
 
     return initForm;
