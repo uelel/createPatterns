@@ -4,7 +4,7 @@ import datetime
 from dataLoad import loadDataFromInfluxdb, loadDataFromFile, DataFrameClient
 
 class dataHandler():
-    """Class that is a universal handler for data loading"""
+    """Class that is a universal handler for data processing"""
 
     loadMethod = None
     loadDataArgs = dict()
@@ -86,7 +86,7 @@ class dataHandler():
 
     @classmethod
     def loadPatterns(cls, t):
-        """Load and return patterns"""
+        """Load and return patterns from json file"""
 
         if t == 'create':
             
@@ -115,3 +115,31 @@ class dataHandler():
 
         else:
             raise Exception('Unknown template!')
+
+    @classmethod
+    def deletePattern(cls, pointer):
+        """Deletes pattern with given pointer from json file"""
+
+        if os.path.isfile(cls.patternFile):
+            # load pattern file
+            try:
+                with open(cls.patternFile, 'r') as patternFile:
+                    patterns = json.load(patternFile)
+            except Exception as e:
+                raise Exception('Error during loading pattern file: %s' % e)
+
+            # delete pattern
+            try:
+                del patterns[pointer]
+            except Exception as e:
+                raise Exception('Error during deleting pattern: %s' % e)
+
+            # dumps updated patterns into file
+            try:
+                with open(cls.patternFile, 'w') as patternFile:
+                    patternFile.write(json.dumps(patterns, indent=4))
+            except Exception as e:
+                raise Exception('Error during saving pattern file: %e' % e)
+            
+        else:
+            raise Exception('Pattern file does not exist!')

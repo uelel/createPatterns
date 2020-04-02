@@ -56,7 +56,15 @@ def loadPatterns():
 
     return createResponse(200, dataHandler.loadPatterns(request.args.get('t')))
 
+@app.route("/deletePattern", methods=['POST'])
+def deletePattern():
+    
+    try:
+        dataHandler.deletePattern(request.json['pointer'])
+        return createResponse(200, "Pattern was successfully deleted!")
+    except Exception as error:
+        print(error)
+        return createResponse(400, "Error during deleting a pattern!")
+
 if __name__ == "__main__":
     app.run(debug=True)
-
-

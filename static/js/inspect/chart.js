@@ -534,27 +534,27 @@ class Chart {
     }
     
     // Function that returns middle dt object of pattern with given pointer
-    getPatternMiddleDt(pointer) {
-        var startDt = this.patternArray[pointer]['startDt'];
-        var stopDt = this.patternArray[pointer]['stopDt'];
+    getPatternMiddleDt() {
+        var startDt = this.patternArray[this.patternPointer]['startDt'];
+        var stopDt = this.patternArray[this.patternPointer]['stopDt'];
         var noMinutes = Math.floor(stopDt.diff(startDt, 'minutes')/2);
         return startDt.clone().add(noMinutes, 'minutes');
     }
 
     // Function that calculates datetime for loading new data based on pattern with given pointer
-    getDtForDataLoad(pointer) {
-        return this.getPatternMiddleDt(pointer).add(Math.floor(this.noCandles/2), 'minutes');
+    getDtForDataLoad() {
+        return this.getPatternMiddleDt(this.patternPointer).add(Math.floor(this.noCandles/2), 'minutes');
     }
 
     // Function that returns chart title based on given pointer
-    createChartTitle(pointer) {
-        return (pointer+1) + "/" + this.patternArray.length;
+    createChartTitle() {
+        return (this.patternPointer+1) + "/" + this.patternArray.length;
     }
 
-    drawPattern(pointer) {
+    drawPattern() {
 
         // calculate datetime for request
-        var dt = this.getDtForDataLoad(pointer);
+        var dt = this.getDtForDataLoad();
 
         // load data for given pattern
         serverRequest('loadNewData', 'inspect', createMessageForDataLoad(dt, 'left')).then((data) => {
@@ -599,24 +599,41 @@ class Chart {
                                              .attr("y2", d => this.yScale(d.Low));
 
             d3.select("#pattern").selectAll("rect").remove();
-            this.pattern.append("rect").attr("class", this.rectClassDict[this.patternArray[pointer].dir])
-                                         .attr("x", this.xScale(this.patternArray[pointer].startDt) - this.xScale.step()*this.xScale.padding()/2)
+            this.pattern.append("rect").attr("class", this.rectClassDict[this.patternArray[this.patternPointer].dir])
+                                         .attr("x", this.xScale(this.patternArray[this.patternPointer].startDt) - this.xScale.step()*this.xScale.padding()/2)
                                          .attr("y", 0)
-                                         .attr("width", this.xScale(this.patternArray[pointer].stopDt) - this.xScale(this.patternArray[pointer].startDt) 
+                                         .attr("width", this.xScale(this.patternArray[this.patternPointer].stopDt) - this.xScale(this.patternArray[this.patternPointer].startDt) 
                                                                     + this.xScale.bandwidth() + this.xScale.step()*this.xScale.padding())
                                          .attr("height", this.chartBodyDim.h);
             
             d3.select("#patternLength").selectAll("text").remove();
-            this.patternLength.append("text").attr("transform", "translate(" + this.xScale(this.getPatternMiddleDt(pointer)) + " , 0)")
-                                             .text(this.patternArray[pointer].stopDt.diff(this.patternArray[pointer].startDt, 'minutes')+1);
+            this.patternLength.append("text").attr("transform", "translate(" + this.xScale(this.getPatternMiddleDt()) + " , 0)")
+                                             .text(this.patternArray[this.patternPointer].stopDt.diff(this.patternArray[this.patternPointer].startDt, 'minutes')+1);
+
+            this.chartTitle.text(this.createChartTitle());
         });
 
+    }
+
+    // Function that handles pattern deletion
+    deletePattern() {
+        bootbox.confirm("Do you want to delete pattern No. " + (this.patternPointer+1) + "?", (result) => { 
+            if (result === true) {
+                serverRequest('deletePattern', 'inspect', {'pointer': this.patternPointer}).then(() => {
+                    serverRequest('loadPatterns', 'inspect', null).then((patterns) => {
+                        this.patternArray = this.parseDates(patterns);
+                        while (this.patternArray[this.patternPointer] === undefined) { this.patternPointer--; }
+                        this.drawPattern();
+                    });
+                });
+            }
+        });
     }
 
     constructor(svg, pars, width, height, patterns) {
         
         // declare variables for data processing
-        this.dataPointer,
+        this.patternPointer,
         this.isLoadingData = false,
         this.noPrevTransCandles = 0,
         this.priceArray = [],
@@ -669,9 +686,12 @@ class Chart {
 
         this.mainArea = this.svg.append("g").attr("transform", "translate(0, 0)");
         
-        this.chartAreaMargin = { top: 100, right: 100, bottom: 100, left: 100 },
+        this.chartAreaMargin = { top: 50, right: 100, bottom: 100, left: 100 },
 	    this.chartAreaDim = { w: this.width - this.chartAreaMargin.left - this.chartAreaMargin.right,
                               h: this.height - this.chartAreaMargin.top - this.chartAreaMargin.bottom },
+        
+        this.chartTitle = this.mainArea.append("g").attr("transform", "translate(" + this.chartAreaMargin.left + ", " + (this.chartAreaMargin.top - 10) + ")")
+                                       .append("text").attr("transform", "translate(" + this.chartAreaDim.w/2 + " , 0)");
         
         this.chartArea = this.mainArea.append("g").attr("transform", "translate(" + this.chartAreaMargin.left + "," + this.chartAreaMargin.top + ")");
         
@@ -698,7 +718,24 @@ class Chart {
                                   .append("xhtml:button").attr("type", "button")
                                                          .attr("class", "btn btn-primary")
                                   .append("xhtml:div").attr("class", "fa fa-arrow-right");
+       
+        this.downPanel = this.svg.append("foreignObject").attr("x", this.chartAreaMargin.left)
+                                                          .attr("y", this.chartAreaMargin.top + this.chartAreaDim.h)
+                                                          .attr("width", this.chartAreaDim.w)
+                                                          .attr("height", this.chartAreaMargin.bottom)
+                                  .append("xhtml:div").attr("class", "row h-100 align-items-center text-center")
+                                  .append("xhtml:div").attr("class", "col");
         
+        this.downPanel.append("xhtml:button").attr("type", "button")
+                                             .attr("class", "btn btn-secondary")
+                                             .style("margin-right", "5px")
+                                             .text("Adjust");
+        this.downPanel.append("xhtml:button").attr("type", "button")
+                                             .attr("class", "btn btn-warning")
+                                             .style("margin-left", "5px")
+                                             .text("Delete")
+                                             .on("click", this.deletePattern.bind(this));
+
         this.chartBodyMargin = { top: 30, right: 30, bottom: 70, left: 80 },
 	    this.chartBodyDim = { w: this.chartAreaDim.w - this.chartBodyMargin.left - this.chartBodyMargin.right,
                               h: this.chartAreaDim.h - this.chartBodyMargin.top - this.chartBodyMargin.bottom },
@@ -758,9 +795,9 @@ class Chart {
 
         // process patterns and call loading of first pattern
         this.patternArray = this.parseDates(patterns);
-        console.log(this.patternArray);
-
-        this.drawPattern(0);
+        
+        this.patternPointer = 0;
+        this.drawPattern();
     }
 
 }
