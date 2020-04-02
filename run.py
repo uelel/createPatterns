@@ -66,5 +66,15 @@ def deletePattern():
         print(error)
         return createResponse(400, "Error during deleting a pattern!")
 
+@app.route("/editPattern", methods=['POST'])
+def editPattern():
+    
+    try:
+        dataHandler.editPattern(request.json['pointer'], request.json['startDt'], request.json['stopDt'])
+        return createResponse(200, "Pattern was successfully edited!")
+    except Exception as error:
+        print(error)
+        return createResponse(400, "Error during editing a pattern!")
+
 if __name__ == "__main__":
     app.run(debug=True)

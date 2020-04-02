@@ -143,3 +143,32 @@ class dataHandler():
             
         else:
             raise Exception('Pattern file does not exist!')
+    
+    @classmethod
+    def editPattern(cls, pointer, startDt, stopDt):
+        """Edit datetimes of pattern with given pointer"""
+
+        if os.path.isfile(cls.patternFile):
+            # load pattern file
+            try:
+                with open(cls.patternFile, 'r') as patternFile:
+                    patterns = json.load(patternFile)
+            except Exception as e:
+                raise Exception('Error during loading pattern file: %s' % e)
+
+            # edit pattern
+            try:
+                patterns[pointer]['startDt'] = startDt
+                patterns[pointer]['stopDt'] = stopDt
+            except Exception as e:
+                raise Exception('Error during editing pattern: %s' % e)
+
+            # dumps updated patterns into file
+            try:
+                with open(cls.patternFile, 'w') as patternFile:
+                    patternFile.write(json.dumps(patterns, indent=4))
+            except Exception as e:
+                raise Exception('Error during saving pattern file: %e' % e)
+            
+        else:
+            raise Exception('Pattern file does not exist!')

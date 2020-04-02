@@ -23,9 +23,10 @@ function serverRequest(requestName, template, messageArray) {
                    'loadNewData': '/loadNewData?'+'t='+template+'&'+$.param(messageArray),
                    'loadPatterns': '/loadPatterns?'+'t='+template,
                    'savePattern': '/savePattern',
-                   'deletePattern': '/deletePattern'};
+                   'deletePattern': '/deletePattern',
+                   'editPattern': '/editPattern'};
     // create request method
-    var methodDict = {'initData': 'POST', 'loadNewData': 'GET', 'loadPatterns': 'GET', 'savePattern': 'POST', 'deletePattern': 'POST'};
+    var methodDict = {'initData': 'POST', 'loadNewData': 'GET', 'loadPatterns': 'GET', 'savePattern': 'POST', 'deletePattern': 'POST', 'editPattern': 'POST'};
     // create request body
     var requestBody = undefined;
     if (methodDict[requestName] === 'POST') { messageArray['t'] = template; requestBody = JSON.stringify(messageArray); }

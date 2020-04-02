@@ -32,6 +32,7 @@ body {
 
 #innerFrame {
     fill: none;
+    pointer-events: fill;
     stroke: black;
     stroke-width: 2px;
 }

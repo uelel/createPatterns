@@ -207,9 +207,9 @@ class Chart {
         }
     }
 
-    // Function that calculates clicked candle from d3.mouse coordinates and returns candle index in dtArray
-    calculateClickedCandle(coord) {
-        return this.dataPointer - this.noCandles + Math.floor((coord[0] - this.xScale.step()*this.xScale.padding()/2)/this.xScale.step());
+    // Function that calculates pointed candle from d3.mouse coordinates and returns candle index in dtArray
+    calculatePointedCandle(coord) {
+        return Math.floor((coord[0] - this.xScale.step()*this.xScale.padding()/2)/this.xScale.step());
     }
 
     // Function that shows window confirming new pattern and handles pattern saving, reloading
@@ -630,10 +630,82 @@ class Chart {
         });
     }
 
+    // Function that toggles pattern adjustment and binds mouse events
+    togglePatternAdjustment() {
+        if (this.isAdjustingPattern) {
+            // In case of active adjustment, inactivate it
+            this.chartBody.on('mousemove', null);
+            d3.select("#fixedPattern").selectAll("rect").remove();
+            this.fixedPatternInitialized = false;
+            this.chartBody.on('click', null);
+        } else {
+            // In case inactive adjustment, activate it
+            this.chartBody.on('mousemove', (d, i, nodes) => this.showFixedPattern(d, i, nodes));
+            this.chartBody.on('click', this.adjustPattern.bind(this));
+        }
+        this.isAdjustingPattern = !this.isAdjustingPattern;
+    }
+
+    // Function that plots fixed pattern at mousemove
+    showFixedPattern(d, i, nodes) {
+        var middleInd = this.calculatePointedCandle(d3.mouse(nodes[i]));
+        if (this.dtArray[middleInd] &&
+            this.dtArray[middleInd - Math.floor(this.fixedPatternLength/2) + 1] &&
+            this.dtArray[middleInd + this.fixedPatternLength - Math.floor(this.fixedPatternLength/2)]) {
+
+            this.fixedPatternStartInd = middleInd - Math.floor(this.fixedPatternLength/2) + 1;
+            this.fixedPatternStopInd = middleInd + this.fixedPatternLength - Math.floor(this.fixedPatternLength/2);
+            d3.select("#fixedPattern").selectAll("rect").remove();
+            this.fixedPattern.append("rect").attr("class", this.rectClassDict[this.patternArray[this.patternPointer].dir])
+                                            .attr("x", this.xScale(this.dtArray[this.fixedPatternStartInd]) - this.xScale.step()*this.xScale.padding()/2)
+                                            .attr("y", 0)
+                                            .attr("width", this.xScale(this.dtArray[this.fixedPatternStopInd]) - this.xScale(this.dtArray[this.fixedPatternStartInd]) 
+                                                                    + this.xScale.bandwidth() + this.xScale.step()*this.xScale.padding())
+                                            .attr("height", this.chartBodyDim.h);
+            this.fixedPatternInitialized = true;
+        } else {
+            d3.select("#fixedPattern").selectAll("rect").remove();
+            this.fixedPatternInitialized = false;
+        }
+        
+    }
+    
+    // Function that handles pattern edit operations
+    adjustPattern() {
+        bootbox.confirm("Do you want to edit pattern No. " + (this.patternPointer+1) + "?", (result) => { 
+            if (result === true) {
+                if (this.fixedPatternInitialized) {
+                    var startDt = this.dtArray[this.fixedPatternStartInd].format('YYYY-MM-DD[T]HH:mm:ss.SSS[Z]');
+                    var stopDt = this.dtArray[this.fixedPatternStopInd].format('YYYY-MM-DD[T]HH:mm:ss.SSS[Z]');
+                    serverRequest('editPattern', 'inspect', {'pointer': this.patternPointer, 'startDt': startDt, 'stopDt': stopDt}).then(() => {
+                        serverRequest('loadPatterns', 'inspect', null).then((patterns) => {
+                            this.patternArray = this.parseDates(patterns);
+                            this.fixedPatternInitialized = false;
+                            this.chartBody.on('mousemove', null);
+                            d3.select("#fixedPattern").selectAll("rect").remove();
+                            this.chartBody.on('click', null);
+                            this.isAdjustingPattern = !this.isAdjustingPattern;
+                            this.drawPattern();
+                        });
+                    });
+                }
+            }
+        });
+    }
+
+    loadPattern(dir) {
+        if (dir === 1 && this.patternPointer < this.patternArray.length-1) { this.patternPointer++; this.drawPattern(); }
+        else if (dir === -1 && this.patternPointer > 0) { this.patternPointer--; this.drawPattern(); }
+    }
+
     constructor(svg, pars, width, height, patterns) {
         
         // declare variables for data processing
         this.patternPointer,
+        this.isAdjustingPattern = false,
+        this.fixedPatternInitialized = false,
+        this.fixedPatternStartInd,
+        this.fixedPatternStopInd,
         this.isLoadingData = false,
         this.noPrevTransCandles = 0,
         this.priceArray = [],
@@ -672,6 +744,7 @@ class Chart {
         this.bullButtonLabel,
         this.bearButtonLabel;
 
+		this.fixedPatternLength = parseFloat(pars['patternLength']);
 		this.noCandles = parseFloat(pars['noCandles']);
         this.yRange = parseFloat(pars['yRange']);
         this.xStep = parseFloat(pars['xStep']);
@@ -707,6 +780,7 @@ class Chart {
                                   .append("xhtml:div").attr("class", "col")
                                   .append("xhtml:button").attr("type", "button")
                                                          .attr("class", "btn btn-primary")
+                                                         .on("click", this.loadPattern.bind(this, -1))
                                   .append("xhtml:div").attr("class", "fa fa-arrow-left");
         
         this.nextButton = this.svg.append("foreignObject").attr("x", this.chartAreaMargin.left + this.chartAreaDim.w)
@@ -717,6 +791,7 @@ class Chart {
                                   .append("xhtml:div").attr("class", "col")
                                   .append("xhtml:button").attr("type", "button")
                                                          .attr("class", "btn btn-primary")
+                                                         .on("click", this.loadPattern.bind(this, 1))
                                   .append("xhtml:div").attr("class", "fa fa-arrow-right");
        
         this.downPanel = this.svg.append("foreignObject").attr("x", this.chartAreaMargin.left)
@@ -727,9 +802,10 @@ class Chart {
                                   .append("xhtml:div").attr("class", "col");
         
         this.downPanel.append("xhtml:button").attr("type", "button")
-                                             .attr("class", "btn btn-secondary")
+                                             .attr("class", "btn btn-info")
                                              .style("margin-right", "5px")
-                                             .text("Adjust");
+                                             .text("Adjust")
+                                             .on("click", this.togglePatternAdjustment.bind(this));
         this.downPanel.append("xhtml:button").attr("type", "button")
                                              .attr("class", "btn btn-warning")
                                              .style("margin-left", "5px")
@@ -748,16 +824,14 @@ class Chart {
                                               .attr("height", this.chartBodyDim.h);
         */
         
-        this.chartBody = this.chartArea.append("g").attr("transform", "translate(" + this.chartBodyMargin.left + "," + this.chartBodyMargin.top + ")")
-                                                   .style("pointer-events", "all")
-                                                   .attr("clip-path", "url(#clip)");
+        this.chartBody = this.chartArea.append("g").attr("transform", "translate(" + this.chartBodyMargin.left + "," + this.chartBodyMargin.top + ")");
         
         this.chartBody.append("rect").attr("id", "innerFrame")
                                      .attr("width", this.chartBodyDim.w)
                                      .attr("height", this.chartBodyDim.h);
         
         this.xAxisCon = this.chartArea.append("g").attr("class", "axis")
-                                            .attr("transform", "translate(" + this.chartBodyMargin.left + "," + (this.chartBodyMargin.top + this.chartBodyDim.h) + ")");
+                                                  .attr("transform", "translate(" + this.chartBodyMargin.left + "," + (this.chartBodyMargin.top + this.chartBodyDim.h) + ")");
 
         this.xTitle = this.chartArea.append("text").attr("transform", "translate(" + (this.chartBodyMargin.left + this.chartBodyDim.w/2) + " ,"
                                                                                    + (this.chartBodyMargin.top + this.chartBodyDim.h + 45) + ")")
@@ -787,6 +861,8 @@ class Chart {
         this.stems = this.chartBody.append("g").attr("id", "stems");
 
         this.pattern = this.chartBody.append("g").attr("id", "pattern");
+        
+        this.fixedPattern = this.chartBody.append("g").attr("id", "fixedPattern");
         
 
         
