@@ -108,7 +108,7 @@ class Chart {
 
     // Function that calculates datetime for loading new data based on pattern with given pointer
     getDtForDataLoad() {
-        return this.getPatternMiddleDt(this.patternPointer).add(Math.floor(this.noCandles/2), 'minutes');
+        return this.getPatternMiddleDt().add(Math.floor(this.noCandles/2), 'minutes');
     }
 
     // Function that returns chart title based on given pointer
@@ -120,10 +120,8 @@ class Chart {
 
         // calculate datetime for request
         var dt = this.getDtForDataLoad();
-
         // load data for given pattern
         serverRequest('loadNewData', 'inspect', createMessageForDataLoad(dt, 'left')).then((data) => {
-            
             data = this.parseDates(data);
             this.priceArray = data;
             this.createDtArray();
@@ -138,7 +136,6 @@ class Chart {
             this.yAxis.scale(this.yScale).tickValues(this.yTicksArray);
             this.xGrid.scale(this.xScale).tickValues(this.xTicksArray);
             this.yGrid.scale(this.yScale).tickValues(this.yTicksArray);
-            console.log(this.yTicksArray);
 
             this.xAxisCon.call(this.xAxis);
             this.yAxisCon.call(this.yAxis);
@@ -278,7 +275,7 @@ class Chart {
         this.xTicksArray = [],
         this.yLimitArray,
         this.yTicksArray,
-        this.rectClassDict = {'1': 'bullPattern', '-1': 'bearPattern'};
+        this.rectClassDict = {'1': 'bullPattern', '-1': 'bearPattern', '0': 'negPattern'};
         this.patternArray = [];
 
 		this.fixedPatternLength = parseFloat(pars['patternLength']);
@@ -407,7 +404,7 @@ class Chart {
         // process patterns and call loading of first pattern
         this.patternArray = this.parseDates(patterns);
         
-        this.patternPointer = 0;
+        this.patternPointer = parseFloat(pars['patternIndStart']);
         this.drawPattern();
     }
 

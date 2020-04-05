@@ -18,6 +18,15 @@ function createInitForm(svg) {
                                                   .attr("class", "form-control")
                                                   .attr("name", "patternFile");
     
+    var patternIndStart = initForm.append("xhtml:div").attr("class", "row form-group justify-content-start");
+    patternIndStart.append("xhtml:label").attr("class", "col-sm-6 col-form-label text-right")
+                                         .text("Start with pattern no.:");
+    patternIndStart.append("xhtml:div").attr("class", "col-sm-2")
+                   .append("xhtml:input").attr("type", "text")
+                                         .attr("class", "form-control")
+                                         .attr("value", "0")
+                                         .attr("name", "patternIndStart");
+    
     var patternLength = initForm.append("xhtml:div").attr("class", "row form-group justify-content-start");
     patternLength.append("xhtml:label").attr("class", "col-sm-6 col-form-label text-right")
                                        .text("Pattern length in minutes:");

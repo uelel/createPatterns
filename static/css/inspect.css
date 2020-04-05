@@ -91,3 +91,8 @@ body {
     fill: red;
     opacity: 0.5;
 }
+
+.negPattern {
+    fill: grey;
+    opacity: 0.5;
+}
