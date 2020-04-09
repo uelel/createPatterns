@@ -55,6 +55,23 @@ function createInitForm(svg) {
                                                   .attr("class", "form-control")
                                                   .attr("name", "patternFile");
 
+    var fixedPattern = initForm.append("xhtml:div").attr("class", "row form-group justify-content-start");
+    fixedPattern.append("xhtml:label").attr("class", "col-sm-6 col-form-label text-right")
+                                      .text("Fixed pattern length:");
+    fixedPatternInput = fixedPattern.append("xhtml:div").attr("class", "input-group col-sm-3");
+    fixedPatternInput.append("xhtml:input").attr("type", "hidden")
+                                           .attr("value", "off")
+                                           .attr("name", "fixedPattern");
+    fixedPatternInput.append("xhtml:input").attr("type", "checkbox")
+                                           .attr("data-toggle", "toggle")
+                                           .attr("data-onstyle", "primary")
+                                           .attr("name", "fixedPattern");
+    fixedPatternInput.append("xhtml:input").attr("type", "text")
+                                           .attr("class", "form-control")
+                                           .attr("value", "")
+                                           .attr("name", "fixedPatternLength")
+                                           .property("disabled", true);
+
     var noCandles = initForm.append("xhtml:div").attr("class", "row form-group justify-content-start");
     noCandles.append("xhtml:label").attr("class", "col-sm-6 col-form-label text-right")
                                    .text("Number of displayed candles:");
@@ -154,17 +171,17 @@ function createInitForm(svg) {
     // Change value of visible input to path of selected pattern file
     $('input[name=patternFileUploadHidden]').change(function() {
         var fileName = $(this).val().replace(/C:\\fakepath\\/i, '');
-        $('input[name=patternFileUploadVisible]').val(fileName);
+        $('input[name=patternFile]').val(fileName);
     });
 
     // Bind Bootstrap datetimepicker to input field
     $('#dateTimePicker').datetimepicker({format: 'DD.MM.YYYY HH:mm', defaultDate: new Date()});
 
-    /*
-    // Define input width to its default content
-    $.each($('input:text'), function(){
-        $(this).css('width',(($(this).val().length) * 6.5 + 20 + 'px'));
+    // Enable/disable constPatternLength text input based on toggle status
+    $('input[name=fixedPattern]').change(function() {
+        console.log(this.checked);
+        $('input[name=fixedPatternLength]').prop('disabled', this.checked != 0 ? false : true);
     });
-    */
+    
     return initForm;
 }								 

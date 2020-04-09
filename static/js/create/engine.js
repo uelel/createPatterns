@@ -35,7 +35,7 @@ $(document).ready(function() {
                     // remove initial form
                     initForm.remove();
                     // draw candlestick chart
-                    chart = new candleStick(svg, pars, width, height, dataLeft, dataRight);
+                    chart = new Chart(svg, pars, width, height, dataLeft, dataRight);
                 });
             });
         });

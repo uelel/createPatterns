@@ -1,4 +1,4 @@
-class candleStick {
+class Chart {
 
     // Function that rounds float to given precision and returns rounded float
     roundFloat(number) { return parseFloat(number.toFixed(this.yPrec)); }
@@ -158,7 +158,6 @@ class candleStick {
         // draw visible patterns
         d3.selectAll("rect.bullPattern").remove();
         d3.selectAll("rect.bearPattern").remove();
-        var rectClassDict = {'1': 'bullPattern', '-1': 'bearPattern'};
         for (let i = 0; i < visPatIndArray.length; i++) {
             let x;
             if (this.xScale(this.patternArray[visPatIndArray[i]].startDt)) {
@@ -168,7 +167,7 @@ class candleStick {
             if(this.xScale(this.patternArray[visPatIndArray[i]].stopDt)) {
                 width = this.xScale(this.patternArray[visPatIndArray[i]].stopDt) - x + this.xScale.bandwidth() + this.xScale.step()*this.xScale.padding()/2;
             } else { width = this.w; }
-            this.chartBody.append("rect").attr("class", rectClassDict[this.patternArray[visPatIndArray[i]].dir])
+            this.chartBody.append("rect").attr("class", this.rectClassDict[this.patternArray[visPatIndArray[i]].dir])
                                          .attr("x", x)
                                          .attr("y", 0)
                                          .attr("width", width)
@@ -191,8 +190,6 @@ class candleStick {
         else if (this.isCreatingNewPattern && dir !== this.newPatternDir) {
             // Change pattern direction
             this.newPatternDir = dir;
-            // Activate pattern creation
-            //this.activatePatternCreation();
             return;
         }
         // In case of inactive pattern creation
@@ -237,15 +234,55 @@ class candleStick {
         }); 
     }
 
+    activatePatternCreation() {
+        if (this.fixedPattern) { this.activateFixedPatternCreation(); }
+        else { this.activateFlexiblePatternCreation(); }
+    }
+
+    activateFixedPatternCreation() {
+        
+        this.chartBody.on('mousemove', (d, i, nodes) => {
+            var middleInd = this.calculateClickedCandle(d3.mouse(nodes[i]));
+            if (this.xScale(this.dtArray[middleInd]) &&
+                this.xScale(this.dtArray[middleInd - Math.floor(this.fixedPatternLength/2) + 1]) &&
+                this.xScale(this.dtArray[middleInd + this.fixedPatternLength - Math.floor(this.fixedPatternLength/2)])) {
+
+                this.fixedPatternStartInd = middleInd - Math.floor(this.fixedPatternLength/2) + 1;
+                this.fixedPatternStopInd = middleInd + this.fixedPatternLength - Math.floor(this.fixedPatternLength/2);
+                d3.select("#fixedPattern").remove();
+                this.chartBody.append("rect").attr("class", this.rectClassDict[this.newPatternDir])
+                                             .attr("id", "fixedPattern")
+                                             .attr("x", this.xScale(this.dtArray[this.fixedPatternStartInd]) - this.xScale.step()*this.xScale.padding()/2)
+                                             .attr("y", 0)
+                                             .attr("width", this.xScale(this.dtArray[this.fixedPatternStopInd]) - this.xScale(this.dtArray[this.fixedPatternStartInd]) 
+                                                            + this.xScale.bandwidth() + this.xScale.step()*this.xScale.padding())
+                                             .attr("height", this.h);
+                this.fixedPatternInitialized = true;
+            } else {
+                d3.select("#fixedPattern").remove();
+                this.fixedPatternInitialized = false;
+            }
+        });
+        
+        this.chartBody.on('click', this.confirmNewFixedPattern.bind(this));
+
+    }
+
+    // Wrapper around confirmNewPattern in case of new fixed pattern
+    confirmNewFixedPattern() {
+        if (this.fixedPatternInitialized) {
+            this.confirmNewPattern(d3.select("#fixedPattern"), this.fixedPatternStartInd, this.fixedPatternStopInd, this.newPatternDir)
+        }
+    }
+
     // Function that registers mouse events needed for drawing new patterns
-    activatePatternCreation(dir) {
+    activateFlexiblePatternCreation() {
        
         var drawing = false;
         var startInd, stopInd;
         var x1, x2;
         var bandwidth = this.xScale.bandwidth();
         var padding = this.xScale.step()*this.xScale.padding();
-        var rectClassDict = {"1": "bullPattern", "-1": "bearPattern"};
         var rect;
 
         this.chartBody.on('mousedown', (d, i, nodes) => {
@@ -253,7 +290,7 @@ class candleStick {
             // calculate index of clicked candle
             startInd = this.calculateClickedCandle(d3.mouse(nodes[i]));
             x1 = this.xScale(this.dtArray[startInd]) + bandwidth/2
-            rect = this.chartBody.append("rect").attr("class", rectClassDict[this.newPatternDir])
+            rect = this.chartBody.append("rect").attr("class", this.rectClassDict[this.newPatternDir])
                                                 .attr("y", 0)
                                                 .attr("height", this.h);
             });
@@ -292,6 +329,9 @@ class candleStick {
         this.chartBody.on('mousedown', null);
         this.chartBody.on('mousemove', null);
         this.chartBody.on('mouseup', null);
+        this.chartBody.on('mousemove', null);
+        this.chartBody.on('click', null);
+        d3.select("#fixedPattern").remove();
     }
 
     // Function that checks whether it is necessary to load new data
@@ -552,6 +592,7 @@ class candleStick {
         this.patternArray = [];
         this.isCreatingNewPattern = false;
         this.newPatternDir;
+        this.rectClassDict = {"1": "bullPattern", "-1": "bearPattern"};
 
         // declare variables for rendering
         this.focus,
@@ -594,6 +635,17 @@ class candleStick {
 		
 		// define number of decimal points of y labels
 		this.yPrec = parseFloat(pars['yPrec']);
+        
+        // define fixed pattern parameters
+        if (pars['fixedPattern'] == "on") {
+            this.fixedPattern = true;
+            this.fixedPatternLength = parseFloat(pars['fixedPatternLength']);
+            this.fixedPatternInitialized = false;
+            this.fixedPatternStartInd,
+            this.fixedPatternStopInd;
+        } else if (pars['fixedPattern'] == "off") {
+            this.fixedPattern = false;
+        }
         
         // load up data and then draw chart
         this.processData(dataLeft, dataRight).then(() => { this.drawChart(); });
