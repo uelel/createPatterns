@@ -175,7 +175,11 @@ function createInitForm(svg) {
     });
 
     // Bind Bootstrap datetimepicker to input field
-    $('#dateTimePicker').datetimepicker({format: 'DD.MM.YYYY HH:mm', defaultDate: new Date()});
+    $('#dateTimePicker').datetimepicker({
+        format: 'DD.MM.YYYY HH:mm',
+        defaultDate: new Date(),
+        widgetPositioning: { horizontal: "right" }
+    });
 
     // Enable/disable constPatternLength text input based on toggle status
     $('input[name=fixedPattern]').change(function() {
