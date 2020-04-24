@@ -1,1 +1,1 @@
-# candlestickChart
+# createPatterns
