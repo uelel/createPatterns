@@ -84,7 +84,7 @@ body {
 	text-align: justify;
 	border: 0px solid grey;
 	width: 190px;
-	height: 83px;
+	height: 125px;
 	transform: translate(1%, 1%);
 }
 
@@ -95,10 +95,21 @@ body {
 
 .bullPattern {
     fill: green;
-    opacity: 0.5;
+    fill-opacity: 0.5;
+    stroke: green;
+    stroke-width: 0.5px;
 }
 
 .bearPattern {
     fill: red;
-    opacity: 0.5;
+    fill-opacity: 0.5;
+    stroke: red;
+    stroke-width: 0.5px;
+}
+
+.negPattern {
+    fill: grey;
+    fill-opacity: 0.25;
+    stroke: grey;
+    stroke-width: 0.5px;
 }

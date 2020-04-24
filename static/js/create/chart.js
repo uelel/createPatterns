@@ -154,10 +154,10 @@ class Chart {
         for (let i = 0; i < this.patternArray.length; i++) {
             if (this.patternArray[i].startDt.isBetween(startDt, stopDt, null, '()') || this.patternArray[i].stopDt.isBetween(startDt, stopDt, null, '()')) { visPatIndArray.push(i); }
         }
-        
         // draw visible patterns
         d3.selectAll("rect.bullPattern").remove();
         d3.selectAll("rect.bearPattern").remove();
+        d3.selectAll("rect.negPattern").remove();
         for (let i = 0; i < visPatIndArray.length; i++) {
             let x;
             if (this.xScale(this.patternArray[visPatIndArray[i]].startDt)) {
@@ -344,13 +344,10 @@ class Chart {
             if (this.dataPointer-this.noCandles < 0) {
                 var dir = 'left';
                 var message = createMessageForDataLoad(this.dtArray[0], dir);
-                console.log('reached left limit of array');
             } else if (this.dataPointer > this.priceArray.length-1) {
                 var dir = 'right';
                 var message = createMessageForDataLoad(this.dtArray.slice(-1)[0], dir);
-                console.log('reached right limit of array');
             } else { return resolve(); }
-            console.log('continuing to serverRequest'); 
             // load new data if necessary
             this.isLoadingData = true;
             serverRequest('loadNewData', 'create', message).then((data) => {
@@ -364,8 +361,6 @@ class Chart {
                     this.priceArray = this.priceArray.concat(data);
                     this.createDtArray();
                 }
-                console.log('priceArray', this.priceArray);
-                console.log('dtArray', this.dtArray);
                 return resolve();
             });
         });
@@ -521,6 +516,10 @@ class Chart {
                                                  .attr("class", "btn btn-danger")
                                                  .attr("value", "NEW BEAR PATTERN")
                                                  .on("click", this.togglePatternCreation.bind(this, "-1"));
+        this.patternButtons.append("xhtml:input").attr("type", "button")
+                                                 .attr("class", "btn btn-secondary")
+                                                 .attr("value", "NEW NON-PATTERN")
+                                                 .on("click", this.togglePatternCreation.bind(this, "0"));
 
         // create zoom object
         // disable zooming (scale factor of one only)
@@ -592,7 +591,7 @@ class Chart {
         this.patternArray = [];
         this.isCreatingNewPattern = false;
         this.newPatternDir;
-        this.rectClassDict = {"1": "bullPattern", "-1": "bearPattern"};
+        this.rectClassDict = {"1": "bullPattern", "-1": "bearPattern", "0": "negPattern"};
 
         // declare variables for rendering
         this.focus,
