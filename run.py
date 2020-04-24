@@ -14,13 +14,9 @@ def createResponse(status, message):
 
 app = Flask(__name__, static_url_path='/static')
 
-@app.route("/create")
+@app.route("/")
 def createPatterns():
-    return render_template('create.html')
-
-@app.route("/inspect")
-def inspectPatterns():
-    return render_template('inspect.html')
+    return render_template('index.html')
 
 @app.route("/initData", methods=['POST'])
 def initData():
@@ -30,7 +26,7 @@ def initData():
         return createResponse(200, "Data connection successfully initialized!")
     except Exception as error:
         print(error)
-        return createResponse(400, "Error during initiating data connection!")
+        return createResponse(400, "Error during initiating data connection! %s" % error)
 
 @app.route("/loadNewData", methods=['GET'])
 def loadNewData():
@@ -39,7 +35,7 @@ def loadNewData():
         return createResponse(200, dataHandler.load(request.args.get('dtLimit'), request.args.get('dir')))
     except Exception as error:
         print(error)
-        return createResponse(400, "Error during loading new data!")
+        return createResponse(400, "Error during loading new data! %s" % error)
 
 @app.route("/savePattern", methods=['POST'])
 def savePattern():
@@ -49,32 +45,12 @@ def savePattern():
         return createResponse(200, "New pattern was successfully saved!")
     except Exception as error:
         print(error)
-        return createResponse(400, "Error during saving new pattern!")
+        return createResponse(400, "Error during saving new pattern! %s" % error)
 
 @app.route("/loadPatterns", methods=['GET'])
 def loadPatterns():
 
-    return createResponse(200, dataHandler.loadPatterns(request.args.get('t')))
-
-@app.route("/deletePattern", methods=['POST'])
-def deletePattern():
-    
-    try:
-        dataHandler.deletePattern(request.json['pointer'])
-        return createResponse(200, "Pattern was successfully deleted!")
-    except Exception as error:
-        print(error)
-        return createResponse(400, "Error during deleting a pattern!")
-
-@app.route("/editPattern", methods=['POST'])
-def editPattern():
-    
-    try:
-        dataHandler.editPattern(request.json['pointer'], request.json['startDt'], request.json['stopDt'])
-        return createResponse(200, "Pattern was successfully edited!")
-    except Exception as error:
-        print(error)
-        return createResponse(400, "Error during editing a pattern!")
+    return createResponse(200, dataHandler.loadPatterns())
 
 if __name__ == "__main__":
     app.run(debug=True)

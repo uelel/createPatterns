@@ -17,19 +17,17 @@ function createMessageForPatternSave(startDt, stopDt, dir) {
     return message;
 }
 
-function serverRequest(requestName, template, messageArray) {
+function serverRequest(requestName, messageArray) {
     // create url
     var urlDict = {'initData': '/initData',
-                   'loadNewData': '/loadNewData?'+'t='+template+'&'+$.param(messageArray),
-                   'loadPatterns': '/loadPatterns?'+'t='+template,
-                   'savePattern': '/savePattern',
-                   'deletePattern': '/deletePattern',
-                   'editPattern': '/editPattern'};
+                   'loadNewData': '/loadNewData?'+$.param(messageArray),
+                   'loadPatterns': '/loadPatterns',
+                   'savePattern': '/savePattern'};
     // create request method
-    var methodDict = {'initData': 'POST', 'loadNewData': 'GET', 'loadPatterns': 'GET', 'savePattern': 'POST', 'deletePattern': 'POST', 'editPattern': 'POST'};
+    var methodDict = {'initData': 'POST', 'loadNewData': 'GET', 'loadPatterns': 'GET', 'savePattern': 'POST'};
     // create request body
     var requestBody = undefined;
-    if (methodDict[requestName] === 'POST') { messageArray['t'] = template; requestBody = JSON.stringify(messageArray); }
+    if (methodDict[requestName] === 'POST') { requestBody = JSON.stringify(messageArray); }
     //
     return fetch(urlDict[requestName], {headers: {'Content-Type': 'application/json'},
                                         method: methodDict[requestName],

@@ -26,12 +26,12 @@ $(document).ready(function() {
         $.each($(this).serializeArray(), function(i, field) { pars[field.name] = field.value; });
         console.log(pars);        
         // Call initData request
-        serverRequest('initData', 'create', pars).then(() => {
+        serverRequest('initData', pars).then(() => {
             // Create messages for loading data and call loadNewData request
             var messageLeft = createMessageForDataLoad(pars['initDt'], 'left');
-            serverRequest('loadNewData', 'create', messageLeft).then((dataLeft) => {
+            serverRequest('loadNewData', messageLeft).then((dataLeft) => {
                 var messageRight = createMessageForDataLoad(pars['initDt'], 'right');
-                serverRequest('loadNewData', 'create', messageRight).then((dataRight) => {
+                serverRequest('loadNewData', messageRight).then((dataRight) => {
                     // remove initial form
                     initForm.remove();
                     // draw candlestick chart
