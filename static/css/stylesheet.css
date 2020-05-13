@@ -48,7 +48,7 @@ body {
 }
 
 .stemDown {
-    store: red;
+    stroke: red;
 }
 
 .grid line {
