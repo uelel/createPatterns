@@ -24,7 +24,6 @@ $(document).ready(function() {
         // Serialize form values
 		var pars = {};
         $.each($(this).serializeArray(), function(i, field) { pars[field.name] = field.value; });
-        console.log(pars);        
         // Call initData request
         serverRequest('initData', pars).then(() => {
             // Create messages for loading data and call loadNewData request

@@ -21,7 +21,9 @@ class Chart {
     }
 
     // Function that returns middle date object from array of dates
-    getAverDate(startInd, endInd) {
+    getAverDate() {
+        var startInd = this.dataPointer - this.noCandles;
+        var endInd = this.dataPointer;
         var arraySlice = this.dtArray.slice(startInd, endInd);
         this.averDate = arraySlice[Math.floor(arraySlice.length / 2)];
     }
@@ -35,7 +37,10 @@ class Chart {
     }
 
     // Function that creates array of x axis ticks
-    createXTicks(startInd, stopInd) {
+    createXTicks() {
+        var startInd = this.dataPointer-this.noCandles;
+        var stopInd = this.dataPointer;
+
         // delete previous array content
         this.xTicksArray = [];
         
@@ -68,19 +73,27 @@ class Chart {
     xValuesFormatter(dt) { return dt.format('HH:mm'); }
 
     // Function that calculates limits of y axis so that its length is equal to yRange and data is centered
-    getYLimits(dtArrayStart, dtArrayEnd) {
+    calcYDomain() {
+        this.yDomainArray = [this.roundFloat(this.scrollPercYScale(this.scrollPerc) - this.yRange/2),
+                             this.roundFloat(this.scrollPercYScale(this.scrollPerc) + this.yRange/2)];
+    }
+    
+    // calculates y limits of plotted data
+    calcYLimits() {
         var ohlcArray = [];
-        for(let i = dtArrayStart; i < dtArrayEnd; i++){
-            ohlcArray.push(parseFloat(this.priceArray[i].Open), parseFloat(this.priceArray[i].High), parseFloat(this.priceArray[i].Low), parseFloat(this.priceArray[i].Close));
+        for (let i = this.dataPointer-this.noCandles; i < this.dataPointer; i++) {
+            ohlcArray.push(parseFloat(this.priceArray[i].Open),
+                           parseFloat(this.priceArray[i].High),
+                           parseFloat(this.priceArray[i].Low),
+                           parseFloat(this.priceArray[i].Close));
         }
-        var middlePrice = (d3.max(ohlcArray) - d3.min(ohlcArray))/2 + d3.min(ohlcArray);
-        this.yLimitArray = [this.roundFloat(middlePrice - this.yRange/2), this.roundFloat(middlePrice + this.yRange/2)];
+        this.yLimitArray = [d3.min(ohlcArray), d3.max(ohlcArray)];
     }
 
     // Function that creates array with y ticks
     createYTicks() {
         var labelsArray = [];
-        for (let i = this.yLimitArray[0]; i <= this.yLimitArray[1]; i += this.yStep) {
+        for (let i = this.yDomainArray[0]; i <= this.yDomainArray[1]; i += this.yStep) {
             labelsArray.push(this.roundFloat(i));
         }
         this.yTicksArray = labelsArray;
@@ -137,9 +150,9 @@ class Chart {
         d3.select("line.weekendLine").remove();
         if (weekStartDt) {
             this.chartBody.append("line").attr("class", "weekendLine")
-                                         .attr("x1", this.xScale(weekStartDt) - this.xBand.bandwidth()/2)
+                                         .attr("x1", this.xScale(weekStartDt) - this.xScale.bandwidth()/2)
                                          .attr("y1", 0)
-                                         .attr("x2", this.xScale(weekStartDt) - this.xBand.bandwidth()/2)
+                                         .attr("x2", this.xScale(weekStartDt) - this.xScale.bandwidth()/2)
                                          .attr("y2", this.h);
         }
     }
@@ -366,8 +379,31 @@ class Chart {
         });
     }
 
+    calcScrollbarHeight() {
+        return this.h*(this.yLimitArray[1]-this.yLimitArray[0])/this.yRange;
+    }
+    
+    updateScrollPercYScale() {
+
+        if ((this.yLimitArray[1]-this.yLimitArray[0]) > this.yRange) {
+            this.scrollPercYScale.range([this.yLimitArray[1]-this.yRange/2, this.yLimitArray[0]+this.yRange/2]);
+        } else {
+            this.scrollPercYScale.range([this.yLimitArray[0]+(this.yLimitArray[1]-this.yLimitArray[0])/2,
+                                         this.yLimitArray[0]+(this.yLimitArray[1]-this.yLimitArray[0])/2]);
+        }
+    }
+
+    updateScrollTopPercScale() {
+    
+        if ((this.yLimitArray[1]-this.yLimitArray[0]) > this.yRange) {
+            this.scrollTopPercScale.domain([0, $("#scrollbar-content").height()-$("#scrollbar").height()]);
+        } else {
+            this.scrollTopPercScale.domain([0, 0]);
+        }
+    }
+    
     // define what should be re-rendered during zoom event
-    pan() {
+    panX() {
         
         if (this.isLoadingData) { return; }
 
@@ -376,52 +412,45 @@ class Chart {
         
         // check if data is available for given translation
         this.checkAvailData().then(() => {
-            
-            // update x scale
-            //this.xScale = d3.scalePoint().domain(this.dtArray.slice(this.dataPointer-this.noCandles, this.dataPointer)).range([0, this.w]);
-            this.xScale.domain(this.dtArray.slice(this.dataPointer-this.noCandles, this.dataPointer));
-            
-            // create new x ticks
-            this.createXTicks(this.dataPointer-this.noCandles, this.dataPointer);
-            
-            // update x axis
-            this.gX.call(this.xAxis.scale(this.xScale).tickValues(this.xTicksArray));
 
-            // update x grid
-            this.gGX.call(this.xGrid.scale(this.xScale).tickValues(this.xTicksArray));
+            this.createXTicks();
+            this.getAverDate();
+            this.calcYLimits();
             
-            // get limits of y axis
-            this.getYLimits(this.dataPointer-this.noCandles, this.dataPointer);
-
-            // get value of y ticks
+            // draw and center scrollbar
+            d3.select("#scrollbar-content").style("height", this.calcScrollbarHeight() + "px");
+            $("#scrollbar").scrollTop(($("#scrollbar-content").height()-$("#scrollbar").height())/2);
+            // set 50 perc scroll for y domain
+            this.scrollPerc = 50.0;
+            // update scroll scales
+            this.updateScrollPercYScale();
+            this.updateScrollTopPercScale();
+            
+            this.calcYDomain();
             this.createYTicks();
-
-            // update yScale
-            this.yScale = d3.scaleLinear().domain([this.yLimitArray[0], this.yLimitArray[1]]).range([this.h, 0]);
-
-            // update yAxis
-            this.gY.call(this.yAxis.scale(this.yScale).tickValues(this.yTicksArray));
-
-            // update yGrid
-            this.gGY.call(this.yGrid.scale(this.yScale).tickValues(this.yTicksArray));
             
-            // calculate most common date
-            this.getAverDate(this.dataPointer-this.noCandles, this.dataPointer);
-
-            // update x title
-            this.xTitle.text(this.dateFormatter(this.averDate));
-
-            // update candles and stems
-            this.drawCandlesAndStems();
-
-            // draw weekend line if necessary
-            this.drawWeekendLine(this.dataPointer-this.noCandles, this.dataPointer);
+            this.drawChart();
             
-            // draw existing patterns
-            this.drawExistingPatterns(this.dataPointer-this.noCandles, this.dataPointer);
-
             this.isLoadingData = false;
         });
+    }
+
+    drawChart() {
+        
+        this.xScale.domain(this.dtArray.slice(this.dataPointer-this.noCandles, this.dataPointer));
+        this.gX.call(this.xAxis.scale(this.xScale).tickValues(this.xTicksArray));
+        this.gGX.call(this.xGrid.scale(this.xScale).tickValues(this.xTicksArray));
+        this.yScale.domain([this.yDomainArray[0], this.yDomainArray[1]]);
+        this.gY.call(this.yAxis.scale(this.yScale).tickValues(this.yTicksArray));
+        this.gGY.call(this.yGrid.scale(this.yScale).tickValues(this.yTicksArray));
+        this.xTitle.text(this.dateFormatter(this.averDate));
+        
+        // Draw candles and stems
+        this.drawCandlesAndStems();
+        // draw weekend line if necessary
+        this.drawWeekendLine(this.dataPointer-this.noCandles, this.dataPointer);
+        // draw existing patterns
+        this.drawExistingPatterns(this.dataPointer-this.noCandles, this.dataPointer);
     }
 
     // Function that process initial data
@@ -430,61 +459,111 @@ class Chart {
         return new Promise((resolve, reject) => {
             
             this.dataPointer = dataLeft.length;
-
+            
             // Parse dates to moment objects
             dataLeft = this.parseDates(dataLeft);
             dataRight = this.parseDates(dataRight);
             
             // create price array from data
             this.priceArray = dataLeft.concat(dataRight);
-            
-            // get array of dates from data
-            this.createDtArray();
-
-            // calculate most common date for x axis title
-            this.getAverDate(this.dataPointer - this.noCandles, this.dataPointer);
-            
-            // define linear x-axis scale for positioning of candles
-            // inital scale displays noCandles of most recent candles
-            //this.xScale = d3.scalePoint().domain(this.dtArray.slice(this.dataPointer-this.noCandles, this.dataPointer)).range([0, this.w]);
-            this.xScale = d3.scaleBand().domain(this.dtArray.slice(this.dataPointer-this.noCandles, this.dataPointer)).range([0, this.w]).padding(0.3);
-
-            // define banded x-axis scale to account for padding between candles
-            // band scale accounts for padding between candles; range consists of x positions of candles
-            this.xBand = d3.scaleBand().domain(d3.range(this.dataPointer-this.noCandles, this.dataPointer)).range([0, this.w]).padding(0.3);
-            
-            // create array with x ticks
-            this.createXTicks(this.dataPointer-this.noCandles, this.dataPointer);
-
-            // get initial limits of y axis
-            this.getYLimits(this.dataPointer-this.noCandles, this.dataPointer);
-            
-            // create array with y labels
-            this.createYTicks();
-            
-            // define linear y-axis scale
-            this.yScale = d3.scaleLinear().domain([this.yLimitArray[0], this.yLimitArray[1]]).range([this.h, 0]);
-            
-            // define x-axis, apply scale and tick formatting
-            //this.xAxis = d3.axisBottom().scale(this.xScale).ticks(d3.timeMinute.every(this.xStep)).tickFormat(this.timeFormatter);
-            this.xAxis = d3.axisBottom().scale(this.xScale).tickValues(this.xTicksArray).tickFormat(this.xValuesFormatter);
-
-            // define y-axis, apply scale and define label values and precision
-            this.yAxis = d3.axisLeft().scale(this.yScale).tickValues(this.yTicksArray).tickFormat(d3.format("."+this.yPrec+"f"));
-            
-            // Define x gridlines
-            this.xGrid = d3.axisBottom().scale(this.xScale).tickValues(this.xTicksArray).tickFormat("").tickSize(this.h);
-            
-            // Define y gridlines
-            this.yGrid = d3.axisLeft().scale(this.yScale).tickValues(this.yTicksArray).tickFormat("").tickSize(-this.w);
 
             // load pattern array
-            serverRequest('loadPatterns', null).then((data) => {data = this.parseDates(data); this.patternArray = data; return resolve();});
+            serverRequest('loadPatterns', null).then((data) => {
+                data = this.parseDates(data);
+                this.patternArray = data;
+                return resolve();
+            });
         });
     }
 
-    drawChart() {
+    // y panning callback
+    panY() {
+        
+        if (this.loadingData) { return; }
+        // calculate scroll percentage
+        this.scrollPerc = this.scrollTopPercScale($("#scrollbar").scrollTop());
+        // draw chart
+        this.calcYDomain();
+        this.createYTicks();
+        this.drawChart();
+    }
     
+    constructor(svg, pars, width, height, dataLeft, dataRight) {
+        
+        // declare variables for data processing
+        this.dataPointer,
+        this.isLoadingData = false,
+        this.noPrevTransCandles = 0,
+        this.priceArray = [],
+        this.dtArray,
+        this.averDate,
+        this.xScale,
+        this.xTicksArray = [],
+        this.yLimitArray = [],
+        this.yDomainArray = [],
+        this.yTicksArray = [],
+        this.yScale,
+        this.xAxis,
+        this.xGrid,
+        this.yAxis,
+        this.yGrid;
+
+        // declare variables for patterns
+        this.patternArray = [];
+        this.isCreatingNewPattern = false;
+        this.newPatternDir;
+        this.rectClassDict = {"1": "bullPattern", "-1": "bearPattern", "0": "negPattern"};
+
+        // declare variables for rendering
+        this.focus,
+        this.chartBody,
+        this.zoom,
+        this.gX,
+        this.xTitle,
+        this.gY,
+        this.gGX,
+        this.gGY,
+        this.candles,
+        this.stems,
+        this.weekendLine,
+        this.patternButtons,
+        this.bullButtonLabel,
+        this.bearButtonLabel;
+
+		// define number of candles displayed
+		this.noCandles = parseFloat(pars['noCandles']);
+		// define range of y axis
+        this.yRange = parseFloat(pars['yRange']);
+        // define number of minutes between x ticks
+        this.xStep = parseFloat(pars['xStep']);
+		// define step of y ticks
+		this.yStep = parseFloat(pars['yStep']);
+		// define number of decimal points of y labels
+		this.yPrec = parseFloat(pars['yPrec']);
+        
+        // define fixed pattern parameters
+        if (pars['fixedPattern'] == "on") {
+            this.fixedPattern = true;
+            this.fixedPatternLength = parseFloat(pars['fixedPatternLength']);
+            this.fixedPatternInitialized = false;
+            this.fixedPatternStartInd,
+            this.fixedPatternStopInd;
+        } else if (pars['fixedPattern'] == "off") {
+            this.fixedPattern = false;
+        }
+        
+        // create svg backbone
+        this.svg = svg;
+
+        this.width = width,
+        this.height = height;
+
+        // define margins
+        this.margin = { top: 15, right: 50, bottom: 80, left: 80 },
+	    this.w = this.width - this.margin.left - this.margin.right,
+		this.h = this.height - this.margin.top - this.margin.bottom;
+		
+        
         // create clip path that hides clipped elements outside of it
         this.svg.append("defs").append("clipPath").attr("id", "clip")
                                .append("rect").attr("width", this.w)
@@ -520,135 +599,77 @@ class Chart {
                                                  .attr("class", "btn btn-secondary")
                                                  .attr("value", "NEW NON-PATTERN")
                                                  .on("click", this.togglePatternCreation.bind(this, "0"));
-
+        
+        // scrollbar
+        this.scrollArea = this.svg.append("g").attr("transform", "translate(" + (this.margin.left+this.w) + ","
+                                                                              + this.margin.top + ")");
+        
+        this.scrollArea.append("foreignObject").attr("width", this.margin.right)
+                                               .attr("height", this.h)
+                       .append("xhtml:div").attr("id", "scrollbar")
+                                           .attr("class", "scrollbar scrollbar-primary")
+                                           .on("scroll", () => { this.panY(); })
+                                           .style("height", this.h+"px")
+                       .append("xhtml:div").attr("id", "scrollbar-content");
+        this.scrollPercYScale = d3.scaleLinear().domain([0, 100]);
+        this.scrollTopPercScale = d3.scaleLinear().range([0, 100]);
+        
         // create zoom object
         // disable zooming (scale factor of one only)
         this.zoom = d3.zoom().scaleExtent([1, 1]);
-        
         // call method that updates chart during zoom event
-        this.zoom.on('zoom', () => { this.pan(); }); // on mousemove
-        
+        this.zoom.on('zoom', () => { this.panX(); }); // on mousemove
         // call zoom on entire svg element so that panning is possible from whole svg
         this.svg.call(this.zoom);
         
-        // Draw x axis
+        // x axis
         this.gX = this.focus.append("g").attr("class", "axis")
-                                        .attr("transform", "translate(0," + this.h + ")")
-                                        .call(this.xAxis);
-
-        // Draw x axis title
+                                        .attr("transform", "translate(0," + this.h + ")");
+        // x axis title
         this.xTitle = this.focus.append("text").attr("transform", "translate(" + (this.w/2) + " ," + (this.h + this.margin.top + this.margin.bottom/2) + ")")
-                                               .style("text-anchor", "middle")
-                                               .text(this.dateFormatter(this.averDate));
-
-        // Draw y-axis
-        this.gY = this.focus.append("g").attr("class", "axis").call(this.yAxis);
-
-        // Draw x gridlines
-        this.gGX = this.chartBody.append("g").attr("class", "grid").call(this.xGrid);
-        
-        // Draw y gridlines
-        this.gGY = this.chartBody.append("g").attr("class", "grid").call(this.yGrid);
+                                               .style("text-anchor", "middle");
+        // y-axis
+        this.gY = this.focus.append("g").attr("class", "axis");
+        // x gridlines
+        this.gGX = this.chartBody.append("g").attr("class", "grid");
+        // y gridlines
+        this.gGY = this.chartBody.append("g").attr("class", "grid");
         
         // Create container for candles
         this.candles = this.chartBody.append("g").attr("id", "candles");
-
         // Create container for stems
         this.stems = this.chartBody.append("g").attr("id", "stems");
-
-        // Draw candles and stems
-        this.drawCandlesAndStems();
         
-        // draw weekend line if necessary
-        this.drawWeekendLine(this.dataPointer-this.noCandles, this.dataPointer);
-
-        // draw existing patterns
-        this.drawExistingPatterns(this.dataPointer-this.noCandles, this.dataPointer);
-
-    }
-
-    constructor(svg, pars, width, height, dataLeft, dataRight) {
-        
-        // declare variables for data processing
-        this.dataPointer,
-        this.isLoadingData = false,
-        this.noPrevTransCandles = 0,
-        this.priceArray = [],
-        this.dtArray,
-        this.averDate,
-        this.xScale,
-        this.xBand,
-        this.xTicksArray = [],
-        this.yLimitArray,
-        this.yTicksArray,
-        this.yScale,
-        this.xAxis,
-        this.xGrid,
-        this.yAxis,
-        this.yGrid;
-
-        // declare variables for patterns
-        this.patternArray = [];
-        this.isCreatingNewPattern = false;
-        this.newPatternDir;
-        this.rectClassDict = {"1": "bullPattern", "-1": "bearPattern", "0": "negPattern"};
-
-        // declare variables for rendering
-        this.focus,
-        this.chartBody,
-        this.zoom,
-        this.gX,
-        this.xTitle,
-        this.gY,
-        this.gGX,
-        this.gGY,
-        this.candles,
-        this.stems,
-        this.weekendLine,
-        this.patternButtons,
-        this.bullButtonLabel,
-        this.bearButtonLabel;
-
-        // create svg backbone
-        this.svg = svg;
-
-        this.width = width,
-        this.height = height;
-
-        // define margins
-        this.margin = { top: 15, right: 30, bottom: 80, left: 80 },
-	    this.w = this.width - this.margin.left - this.margin.right,
-		this.h = this.height - this.margin.top - this.margin.bottom;
-		
-		// define number of candles displayed
-		this.noCandles = parseFloat(pars['noCandles']);
-		
-		// define range of y axis
-        this.yRange = parseFloat(pars['yRange']);
-
-        // define number of minutes between x ticks
-        this.xStep = parseFloat(pars['xStep']);
-		
-		// define step of y ticks
-		this.yStep = parseFloat(pars['yStep']);
-		
-		// define number of decimal points of y labels
-		this.yPrec = parseFloat(pars['yPrec']);
-        
-        // define fixed pattern parameters
-        if (pars['fixedPattern'] == "on") {
-            this.fixedPattern = true;
-            this.fixedPatternLength = parseFloat(pars['fixedPatternLength']);
-            this.fixedPatternInitialized = false;
-            this.fixedPatternStartInd,
-            this.fixedPatternStopInd;
-        } else if (pars['fixedPattern'] == "off") {
-            this.fixedPattern = false;
-        }
+        this.xScale = d3.scaleBand().range([0, this.w]).padding(0.3);
+        this.yScale = d3.scaleLinear().range([this.h, 0]);
+        this.xAxis = d3.axisBottom().tickFormat(this.xValuesFormatter);
+        this.yAxis = d3.axisLeft().tickFormat(d3.format("."+this.yPrec+"f"));
+        this.xGrid = d3.axisBottom().tickFormat("").tickSize(this.h);
+        this.yGrid = d3.axisLeft().tickFormat("").tickSize(-this.w);
         
         // load up data and then draw chart
-        this.processData(dataLeft, dataRight).then(() => { this.drawChart(); });
+        this.processData(dataLeft, dataRight).then(() => {
+            
+            this.createDtArray();
+            
+            this.createXTicks();
+            this.getAverDate();
+            this.calcYLimits();
 
+            // draw and center scrollbar
+            d3.select("#scrollbar-content").style("height", this.calcScrollbarHeight() + "px");
+            $("#scrollbar").scrollTop(($("#scrollbar-content").height()-$("#scrollbar").height())/2);
+            // set 50 perc scroll for y domain
+            this.scrollPerc = 50.0;
+            // update scroll scales
+            this.updateScrollPercYScale();
+            this.updateScrollTopPercScale();
+
+            this.calcYDomain();
+            this.createYTicks();
+            
+            this.drawChart();
+        });
     }
 
 }
