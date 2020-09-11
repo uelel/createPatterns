@@ -7,8 +7,9 @@ class dataHandler():
     """Class that is a universal handler for data processing"""
 
     loadMethod = None
-    loadDataArgs = dict()
+    loadDataOthersArgs = dict()
     patternFile = None
+    noCandles = None
 
     @classmethod
     def init(cls, pars):
@@ -16,30 +17,35 @@ class dataHandler():
         
         # Reset arguments
         cls.loadMethod = None
-        cls.loadDataArgs = dict()
+        cls.loadDataOthersArgs = dict()
         cls.patternFile = None
+        cls.noCandles = None
 
         # specify path for pattern file 
         cls.patternFile = './static/data/'+pars['patternFile']
+        
+        # specify number of preloaded candles
+        cls.noCandles = 1000
        
         # specify arguments for data loading
         if pars['loadMethod'] == 'influxdb':
             # Specify method for actual data loading
             cls.loadMethod = loadDataFromInfluxdb
             # influxdb client
-            cls.loadDataArgs['client'] = DataFrameClient(host='127.0.0.1', port=8086, database=pars['dbName'])
+            cls.loadDataOthersArgs['client'] = DataFrameClient(host='127.0.0.1',
+                                                               port=8086,
+                                                               database=pars['dbName'])
 
         elif pars['loadMethod'] == 'file':
             # Specify method for actual data loading
             cls.loadMethod = loadDataFromFile
             # filename
-            cls.loadDataArgs['filePath'] = './static/data/'+pars['fileUploadVisible']
+            cls.loadDataOthersArgs['filePath'] = './static/data/'+pars['fileUploadVisible']
 
         else:
-            raise Exception('Data loading method %s unknown during initialization!' % pars['loadMethod'])
+            raise Exception('Data loading method %s unknown during initialization!' %
+                            pars['loadMethod'])
         
-        # specify number of preloaded candles
-        cls.loadDataArgs['noCandles'] = 1000
 
     @classmethod
     def load(cls, dtLimit, direction):
@@ -49,7 +55,10 @@ class dataHandler():
         if direction not in ('left', 'right'):
             raise Exception('Direction unknown during loading new data!')
 
-        return cls.loadMethod(dtLimit, direction, **cls.loadDataArgs)
+        return cls.loadMethod(dtLimit,
+                              direction,
+                              cls.noCandles,
+                              **cls.loadDataOthersArgs)
 
     @classmethod
     def savePattern(cls, startDt, stopDt, direction):
@@ -58,17 +67,23 @@ class dataHandler():
         if os.path.isfile(cls.patternFile):
             
             # load pattern file
-            try:
-                with open(cls.patternFile, 'r') as patternFile:
-                    patterns = json.load(patternFile)
-            except Exception as e:
-                raise Exception('Error during loading pattern file: %s' % e)
+            if os.stat(cls.patternFile).st_size == 0:
+                patterns = list()
+            else:
+                try:
+                    with open(cls.patternFile, 'r') as patternFile:
+                        patterns = json.load(patternFile)
+                except Exception as e:
+                    raise Exception('Error during loading pattern file: %s' % e)
                 
             # append new pattern
             try:
-                patterns.append({'startDt': startDt, 'stopDt': stopDt, 'dir': direction})
+                patterns.append({'startDt': startDt,
+                                 'stopDt': stopDt,
+                                 'dir': direction})
                 # sort updated list by startDt
-                patterns = sorted(patterns, key=lambda p: datetime.datetime.strptime(p['startDt'],'%Y-%m-%dT%H:%M:%S.000Z'))
+                patterns = sorted(patterns,
+                                  key=lambda p: datetime.datetime.strptime(p['startDt'],'%Y-%m-%dT%H:%M:%S.000Z'))
             except Exception as e:
                 raise Exception('Error during updating patterns: %s' % e)
                 

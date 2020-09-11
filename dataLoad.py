@@ -4,18 +4,27 @@ from influxdb import DataFrameClient
 import datetime
 from pytz import timezone
 
-def loadDataFromInfluxdb(dtLimit, direction, client, noCandles):
+def loadDataFromInfluxdb(dtLimit, direction, noCandles, client):
     """Actual implementation of data loading from Influxdb"""
     
     if direction == 'left':
-        query = 'SELECT "time", "open", "high", "low", "close" FROM "rates" WHERE time < \'%s\' ORDER BY DESC LIMIT %i' % (dtLimit, noCandles)
+        query = 'SELECT "time", "open", "high", "low", "close" ' \
+                'FROM "rates" WHERE time < \'%s\' ' \
+                'ORDER BY DESC LIMIT %i' % (dtLimit, noCandles)
     elif direction == 'right':
-        query = 'SELECT "time", "open", "high", "low", "close" FROM "rates" WHERE time > \'%s\' ORDER BY ASC LIMIT %i' % (dtLimit, noCandles)
+        query = 'SELECT "time", "open", "high", "low", "close" ' \
+                'FROM "rates" WHERE time > \'%s\' ' \
+                'ORDER BY ASC LIMIT %i' % (dtLimit, noCandles)
     
     try:
         rates = client.query(query)['rates']
     except Exception as error:
-        raise Exception('Error during loading data from influxdb (dtLimit=%s, direction=%s, noCandles=%i): %s' % (dtLimit, direction, noCandles, error))
+        raise Exception('Error during loading data from influxdb '
+                        '(dtLimit=%s, direction=%s, noCandles=%i): %s' %
+                        (dtLimit,
+                         direction,
+                         noCandles,
+                         error))
    
     try:
         # Move date indices to new column
@@ -29,11 +38,12 @@ def loadDataFromInfluxdb(dtLimit, direction, client, noCandles):
         # Replace null values for np.nan
         rates.replace(0.0, np.nan, inplace=True)
     except Exception as error:
-        raise Exception('Error during modifying pandas array of loaded data: %s' % error)
+        raise Exception('Error during modifying pandas array '
+                        'of loaded data: %s' % error)
     
     return rates
 
-def loadDataFromFile(dtLimit, direction, filePath, noCandles):
+def loadDataFromFile(dtLimit, direction, noCandles, filePath):
     """Actual implementation of data loading from file"""
     
     # Adjust dtLimit string to match file format
@@ -60,11 +70,33 @@ def loadDataFromFile(dtLimit, direction, filePath, noCandles):
     # Load up data to pandas array
     try:
         if direction == 'left':
-            rates = pd.read_csv(filePath, index_col=False, names=['Date', 'Open', 'High', 'Low', 'Close', 'Spread'], delimiter=' ', skiprows=startLine-noCandles, nrows=noCandles)
+            rates = pd.read_csv(filePath,
+                                index_col=False,
+                                names=['Date',
+                                       'Open',
+                                       'High',
+                                       'Low',
+                                       'Close',
+                                       'Spread'],
+                                delimiter=' ',
+                                skiprows=startLine-noCandles,
+                                nrows=noCandles)
         if direction == 'right':
-            rates = pd.read_csv(filePath, index_col=False, names=['Date', 'Open', 'High', 'Low', 'Close', 'Spread'], delimiter=' ', skiprows=startLine, nrows=noCandles)
+            rates = pd.read_csv(filePath,
+                                index_col=False,
+                                names=['Date',
+                                       'Open',
+                                       'High',
+                                       'Low',
+                                       'Close',
+                                       'Spread'],
+                                delimiter=' ',
+                                skiprows=startLine,
+                                nrows=noCandles)
     except Exception as error:
-        raise Exception('Error during loading data from data file %s: %s' % (filePath, error))
+        raise Exception('Error during loading data from data file %s: %s' % 
+                        (filePath,
+                         error))
 
     if rates.empty: raise Exception('No such data exist in given file!')
 
@@ -74,6 +106,7 @@ def loadDataFromFile(dtLimit, direction, filePath, noCandles):
         # Parse datetimes in array
         rates['Date'] = rates['Date'].apply(lambda x: datetime.datetime.strptime(x, '%Y-%m-%d-%H:%M:%S%z'))
     except Exception as error:
-        raise Exception('Error during modifying pandas array of loaded data: %s' % error)
+        raise Exception('Error during modifying pandas array of '
+                        'loaded data: %s' % error)
 
     return rates
